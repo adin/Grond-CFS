@@ -3,6 +3,11 @@
   <!-- Inherit the core Web Toolkit stuff.                        -->
   <inherits name='com.google.gwt.user.User'/>
 
+  <!-- http://code.google.com/p/rcx/ -->
+  <inherits name="com.seventhdawn.gwt.rcx.RCX" />
+  <!-- For ScriptTagJSONPRequest to work. -->
+  <inherits name="com.google.gwt.json.JSON"/>
+
   <!-- Inherit the default GWT style sheet.  You can change       -->
   <!-- the theme of your GWT application by uncommenting          -->
   <!-- any one of the following lines.                            -->
@@ -11,6 +16,10 @@
   <!-- <inherits name='com.google.gwt.user.theme.dark.Dark'/>     -->
 
   <!-- Other module inherits                                      -->
+
+  <!-- Enable cross-site execution of the application. See
+       http://code.google.com/webtoolkit/doc/latest/FAQ_Server.html#What_is_the_Same_Origin_Policy,_and_how_does_it_affect_GWT -->
+  <add-linker name="xs" />
 
   <!-- Specify the app entry point class.                         -->
   <entry-point class='grond.client.Grond'/>

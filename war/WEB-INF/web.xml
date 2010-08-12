@@ -7,13 +7,13 @@
   
   <!-- Servlets -->
   <servlet>
-    <servlet-name>greetServlet</servlet-name>
-    <servlet-class>grond.server.GreetingServiceImpl</servlet-class>
+    <servlet-name>gaeServlet</servlet-name>
+    <servlet-class>grond.server.GaeImpl</servlet-class>
   </servlet>
   
   <servlet-mapping>
-    <servlet-name>greetServlet</servlet-name>
-    <url-pattern>/grond/greet</url-pattern>
+    <servlet-name>gaeServlet</servlet-name>
+    <url-pattern>/grond/gae</url-pattern>
   </servlet-mapping>
   
   <!-- Default page to serve -->
