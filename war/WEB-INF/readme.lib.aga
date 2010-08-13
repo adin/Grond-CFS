@@ -1,2 +1,3 @@
 Added (non-GWT, non-GAE) jars:
 rcx-2.0b.jar from http://code.google.com/p/rcx/
+maddisonLogging.jar from http://davidmaddison.blogspot.com/2009/07/gwt-logging-and-jsni.html

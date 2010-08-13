@@ -6,7 +6,9 @@
   <!-- http://code.google.com/p/rcx/ -->
   <inherits name="com.seventhdawn.gwt.rcx.RCX" />
   <!-- For ScriptTagJSONPRequest to work. -->
-  <inherits name="com.google.gwt.json.JSON"/>
+  <inherits name="com.google.gwt.json.JSON" />
+  <!-- Logging; http://davidmaddison.blogspot.com/2009/07/gwt-logging-and-jsni.html -->
+  <inherits name="com.maddison.gwt.logging.Logging" />
 
   <!-- Inherit the default GWT style sheet.  You can change       -->
   <!-- the theme of your GWT application by uncommenting          -->
