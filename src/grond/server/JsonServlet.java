@@ -66,6 +66,7 @@ public class JsonServlet extends RemoteServiceServlet {
     String callback = request.getParameter("callback");
     JSONObject object = new JSONObject();
     try {
+      response.setContentType("text/javascript");
       object.put("rpcResult", payload);
       response.getWriter().write(callback + "(" + object + ")");
     } catch (Exception ex) {
