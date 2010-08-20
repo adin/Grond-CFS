@@ -10,10 +10,14 @@ import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.Document;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.Style.Unit;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.user.client.DOM;
+import com.google.gwt.user.client.History;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.Anchor;
 import com.google.gwt.user.client.ui.FlexTable;
+import com.google.gwt.user.client.ui.HTMLTable.Cell;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.RootPanel;
 import com.maddison.gwt.logging.client.Logger;
@@ -70,9 +74,9 @@ public class Grond implements EntryPoint {
   }
 
   /** Displays the condition and countries selector, leading to the map page of that country. */
-  protected void conditionAndCountries(Element div) {
+  protected RootPanel conditionAndCountries(Element div) {
     // Prepare our table.
-    FlexTable table = new FlexTable();
+    final FlexTable table = new FlexTable();
     // Table headers.
     table.setHTML(0, 0, "<span class=\"h3\">Chronic Fatigue Syndrome</span>");
     table.setHTML(0, 1, "<span class=\"h3\">Fibromyalgia</span>");
@@ -82,14 +86,30 @@ public class Grond implements EntryPoint {
       for (int col : Arrays.asList(0, 1)) {
         table.setWidget(rows, col, new Anchor(country.name, false));
         table.getCellFormatter().addStyleName(rows, col, col == 0 ? "cfsCountryList" : "fmCountryList");
-        table.getCellFormatter().getElement(rows, col).getStyle().setPaddingLeft(20, Unit.PX);
+        Element element = table.getCellFormatter().getElement(rows, col);
+        element.getStyle().setPaddingLeft(20, Unit.PX);
+        element.setTitle((col == 0 ? "CFS" : "FM") + " patients, click here to see a list of " + country.name
+            + " doctors.");
       }
     }
+    // Handle country clicks.
+    table.addClickHandler(new ClickHandler() {
+      public void onClick(ClickEvent event) {
+        Cell cell = table.getCellForEvent(event);
+        if (cell != null && cell.getRowIndex() > 0) {
+          final Country country = Countries.COUNTRIES.get(cell.getRowIndex() - 1);
+          final String condition = cell.getCellIndex() == 0 ? "cfs" : "fm";
+          History.newItem("mapOf_" + country.id + "_" + condition);
+        }
+      }
+    });
     // Clear the working area, leaving only our table.
-    div.appendChild(table.getElement());
+    RootPanel panel = RootPanel.get(div.getId());
+    panel.add(table);
     while (div.getChildCount() != 1)
       div.removeChild(div.getFirstChild());
     // Fix enclosing div height.
     div.getStyle().setHeight(table.getOffsetHeight() + 30, Unit.PX);
+    return panel;
   }
 }
