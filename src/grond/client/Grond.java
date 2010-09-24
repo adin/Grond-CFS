@@ -75,32 +75,32 @@ public class Grond implements EntryPoint, ValueChangeHandler {
 
     getGae().getCurrentUser(new Callback<Gae.GwtUser>() {
       public void onSuccess(Gae.GwtUser user) {
-        statusLine (user);
+        statusLine(user);
       }
     });
   }
 
   /** Creates a status line which shows that the GROND server is available
    * and whether the current visitor is signed in. */
-  protected void statusLine (Gae.GwtUser user) {
+  protected void statusLine(Gae.GwtUser user) {
     // Add status line after country box.
     // RootPanel should be at the root of any GWT hierarchy in order for the GWT events to work.
     Element div = DOM.createDiv();
-    div.setId ("g.header.div");
+    div.setId("g.header.div");
     countryBox.getParentElement().insertAfter(div, countryBox);
-    RootPanel rootPanel = RootPanel.get ("g.header.div");
-    
+    RootPanel rootPanel = RootPanel.get("g.header.div");
+
     final HTMLPanel panel = new HTMLPanel(
-      "<span id='g.version'></span><span id='g.login'></span><span id='g.tests'></span>");
+        "<span id='g.version'></span><span id='g.login'></span><span id='g.tests'></span>");
     rootPanel.add(panel);
     panel.add(new Label("GROND version 0.1"), "g.version");
     if (user == null) {
       panel.add(new Label("You are not currently signed in!"), "g.login");
-      final Anchor signIn = new Anchor ("Sign in");
+      final Anchor signIn = new Anchor("Sign in");
       signIn.addClickHandler(new ClickHandler() {
         public void onClick(ClickEvent event) {
-          removeChildren (panel.getElementById("g.login"), 0);
-          panel.add (loginForm(), "g.login");
+          removeChildren(panel.getElementById("g.login"), 0);
+          panel.add(loginForm(), "g.login");
         }
       });
       panel.add(signIn, "g.login");
@@ -112,14 +112,14 @@ public class Grond implements EntryPoint, ValueChangeHandler {
           String href = Window.Location.getHref();
           getGae().createLogoutURL(href, new Callback<String>() {
             public void onSuccess(String url) {
-              getLog().info ("Logout URL: " + url);
+              getLog().info("Logout URL: " + url);
               Window.Location.replace(url);
             }
           });
         }
       });
       panel.add(signOut, "g.login");
-      final Anchor test = new Anchor ("test!");
+      final Anchor test = new Anchor("test!");
       test.addClickHandler(new ClickHandler() {
         public void onClick(ClickEvent event) {
           History.newItem("test_1mmheumpihd6h", true); // Secure from non-admin users.
@@ -136,7 +136,7 @@ public class Grond implements EntryPoint, ValueChangeHandler {
     final String href = Window.Location.getHref();
     final String host = Window.Location.getHostName();
 
-    panel.add(new Button ("Sign in with Google", new ClickHandler() {
+    panel.add(new Button("Sign in with Google", new ClickHandler() {
       public void onClick(ClickEvent event) {
         getGae().createLoginURL(href, host, "https://www.google.com/accounts/o8/id", new Callback<String>() {
           public void onSuccess(String url) {
@@ -147,7 +147,7 @@ public class Grond implements EntryPoint, ValueChangeHandler {
       }
     }), "g.loginFormButtons");
 
-    panel.add(new Button ("Sign in with Yahoo", new ClickHandler() {
+    panel.add(new Button("Sign in with Yahoo", new ClickHandler() {
       public void onClick(ClickEvent event) {
         getGae().createLoginURL(href, host, "http://yahoo.com/", new Callback<String>() {
           public void onSuccess(String url) {
@@ -193,9 +193,9 @@ public class Grond implements EntryPoint, ValueChangeHandler {
 
     if (token.length() == 0) {
       conditionAndCountries();
-    } else if (token.equals ("test_1mmheumpihd6h")) { // Unit tests.
+    } else if (token.equals("test_1mmheumpihd6h")) { // Unit tests.
       initCountryBox();
-      testInto (countries);
+      testInto(countries);
     } else if (token.startsWith("mapOf_")) { // Country page.
       int secondUnderscore = token.indexOf('_', 6);
       if (secondUnderscore == -1) throw new RuntimeException("Wrong map token: " + token);
@@ -207,34 +207,35 @@ public class Grond implements EntryPoint, ValueChangeHandler {
           countryInfo(country, condition);
         }
       }
-    } else if (token.startsWith ("rateIn_")) { // Add rating for country.
+    } else if (token.startsWith("rateIn_")) { // Add rating for country.
       int secondUnderscore = token.indexOf('_', 7);
       if (secondUnderscore == -1) throw new RuntimeException("Wrong map token: " + token);
       String countryId = token.substring(7, secondUnderscore);
       String condition = token.substring(secondUnderscore + 1);
       initCountryBox();
-      rateFormInto (countries, countryId, condition);
+      rateFormInto(countries, countryId, condition);
     }
   }
 
-  protected void rateFormInto (RootPanel root, String countryId, String condition) {
-    root.add(new Label ("Thanks for participating!"));
-    root.add(new Label ("Please enter your doctor's name and location. This is necessary to recognize one doctor from another."));
+  protected void rateFormInto(RootPanel root, String countryId, String condition) {
+    root.add(new Label("Thanks for participating!"));
+    root.add(new Label(
+        "Please enter your doctor's name and location. This is necessary to recognize one doctor from another."));
     // TODO: Get data necessary for doctorNameAndLocation.getRating.
   }
 
-  protected void testInto (RootPanel root) {
+  protected void testInto(RootPanel root) {
     final FlowPanel panel = new FlowPanel();
     final ScrollPanel scroll = new ScrollPanel(panel);
-    root.add (scroll);
+    root.add(scroll);
 
     final HTML internalTests = new HTML();
-    panel.add (new Label ("Internal tests:"));
-    panel.add (internalTests);
-    getLog().info ("internal tests...");
-    getGae().internalTests (new Callback<String> () {
+    panel.add(new Label("Internal tests:"));
+    panel.add(internalTests);
+    getLog().info("internal tests...");
+    getGae().internalTests(new Callback<String>() {
       public void onSuccess(String result) {
-        getLog().info (result);
+        getLog().info(result);
         internalTests.setHTML(result);
       }
     });
@@ -296,7 +297,7 @@ public class Grond implements EntryPoint, ValueChangeHandler {
     topDoctors.setHTML(1, 1, "not implemented");
     topDoctors.setHTML(1, 2, "not implemented");
     topDoctors.setHTML(1, 3, "not implemented");
-    topDoctors.setWidget(1, 4, new Button ("Rate!"));
+    topDoctors.setWidget(1, 4, new Button("Rate!"));
 
     countries.add(new HTML("<br/>"));
 
@@ -310,7 +311,7 @@ public class Grond implements EntryPoint, ValueChangeHandler {
           public void onSuccess(Gae.GwtUser user) {
             if (user == null) {
               int widgetIndex = countries.getWidgetIndex(addDoc);
-              countries.remove (widgetIndex);
+              countries.remove(widgetIndex);
               countries.insert(new Label("Not signed in! Please sign in to add the doctor."), widgetIndex);
               countries.insert(loginForm(), widgetIndex + 1);
             } else {
@@ -321,11 +322,14 @@ public class Grond implements EntryPoint, ValueChangeHandler {
         loginIsVisible = true;
       }
     });
-    countries.add (addDoc);
+    countries.add(addDoc);
 
     countries.add(new HTML("<br/>"));
-    
+
     countries.add(new Label("Map for " + country.name));
+
+    // Make sure we have space for all the doctors and the login form.
+    countryBox.getStyle().setHeight(countries.getOffsetHeight() + 70, Unit.PX);
   }
 
   /** Checks if the expression holds and if not throws the error code.
@@ -342,14 +346,15 @@ public class Grond implements EntryPoint, ValueChangeHandler {
     if (countries == null) {
       countries = RootPanel.get("countryBox");
       affirm(countries != null && countryBox != null, 84494814);
-      removeChildren (countryBox, 1);
+      removeChildren(countryBox, 1);
     } else {
       countries.clear();
     }
   }
 
   /** Remove all children elements except the last <code>tail</code> from the given DOM container. */
-  protected void removeChildren (Element element, int tail) {
-    while (element.getChildCount() > tail) element.removeChild (element.getFirstChild());
+  protected void removeChildren(Element element, int tail) {
+    while (element.getChildCount() > tail)
+      element.removeChild(element.getFirstChild());
   }
 }
