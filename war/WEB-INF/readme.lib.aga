@@ -1,3 +1,5 @@
 Added (non-GWT, non-GAE) jars:
 rcx-2.0b.jar from http://code.google.com/p/rcx/
+ -> rcx-head.jar from workspace/gwt-rcx/war/WEB-INF/classes/
 maddisonLogging.jar from http://davidmaddison.blogspot.com/2009/07/gwt-logging-and-jsni.html
+flexjson.jar from http://flexjson.sourceforge.net/, we're using the old 1.9.2 per J's suggestion.

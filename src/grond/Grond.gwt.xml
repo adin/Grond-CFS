@@ -4,9 +4,7 @@
   <inherits name='com.google.gwt.user.User'/>
 
   <!-- http://code.google.com/p/rcx/ -->
-  <inherits name="com.seventhdawn.gwt.rcx.RCX" />
-  <!-- For ScriptTagJSONPRequest to work. -->
-  <inherits name="com.google.gwt.json.JSON" />
+  <inherits name="com.seventhdawn.gwt.rpc.scripttag.RPCOverScriptTag" />
   <!-- Logging; http://davidmaddison.blogspot.com/2009/07/gwt-logging-and-jsni.html -->
   <inherits name="com.maddison.gwt.logging.Logging" />
 
@@ -20,8 +18,12 @@
   <!-- Other module inherits                                      -->
 
   <!-- Enable cross-site execution of the application. See
-       http://code.google.com/webtoolkit/doc/latest/FAQ_Server.html#What_is_the_Same_Origin_Policy,_and_how_does_it_affect_GWT -->
-  <add-linker name="xs" />
+       http://code.google.com/webtoolkit/doc/latest/FAQ_Server.html#What_is_the_Same_Origin_Policy,_and_how_does_it_affect_GWT
+       Notice: there might be a problem using Development Mode with this linker,
+       see http://code.google.com/p/google-web-toolkit/issues/detail?id=4232
+       To enable the Development Mode, comment out the xs linker and restart the AppEngine server,
+       no GWT recompilation is needed. -->
+<!--  <add-linker name="xs" />-->
 
   <!-- Specify the app entry point class.                         -->
   <entry-point class='grond.client.Grond'/>

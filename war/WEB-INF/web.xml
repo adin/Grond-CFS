@@ -4,21 +4,30 @@
     "http://java.sun.com/dtd/web-app_2_3.dtd">
 
 <web-app>
-  
-  <!-- Servlets -->
-  <servlet>
-    <servlet-name>gaeServlet</servlet-name>
-    <servlet-class>grond.server.GaeImpl</servlet-class>
-  </servlet>
-  
-  <servlet-mapping>
-    <servlet-name>gaeServlet</servlet-name>
-    <url-pattern>/grond/gae</url-pattern>
-  </servlet-mapping>
-  
-  <!-- Default page to serve -->
-  <welcome-file-list>
-    <welcome-file>Grond.html</welcome-file>
-  </welcome-file-list>
+
+	<filter>
+		<filter-name>rpcJsonFilter</filter-name>
+		<filter-class>com.seventhdawn.gwt.rpc.scripttag.server.RPCJsonFilter</filter-class>
+	</filter>
+	<filter-mapping>
+		<filter-name>rpcJsonFilter</filter-name>
+		<servlet-name>gaeServlet</servlet-name>
+	</filter-mapping>
+
+	<!-- Servlets -->
+	<servlet>
+		<servlet-name>gaeServlet</servlet-name>
+		<servlet-class>grond.server.GaeImpl</servlet-class>
+	</servlet>
+
+	<servlet-mapping>
+		<servlet-name>gaeServlet</servlet-name>
+		<url-pattern>/grond/gae</url-pattern>
+	</servlet-mapping>
+
+	<!-- Default page to serve -->
+	<welcome-file-list>
+		<welcome-file>Grond.html</welcome-file>
+	</welcome-file-list>
 
 </web-app>

@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head profile="http://selenium-ide.openqa.org/profiles/test-case">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<link rel="selenium.base" href="http://127.0.0.1:8888/" />
+<title>SVCCC</title>
+</head>
+<body>
+<table cellpadding="1" cellspacing="1" border="1">
+<thead>
+<tr><td rowspan="1" colspan="3">SVCCC</td></tr>
+</thead><tbody>
+<tr>
+	<td>setTimeout</td>
+	<td>2000</td>
+	<td></td>
+</tr>
+<tr>
+	<td>open</td>
+	<td>/</td>
+	<td></td>
+</tr>
+<tr>
+	<td>assertTable</td>
+	<td>countryTable.0.0</td>
+	<td>Chronic Fatigue Syndrome</td>
+</tr>
+<tr>
+	<td>verifyTable</td>
+	<td>countryTable.0.1</td>
+	<td>Fibromyalgia</td>
+</tr>
+<tr>
+	<td>verifyTable</td>
+	<td>countryTable.1.0</td>
+	<td>United States</td>
+</tr>
+<tr>
+	<td>verifyTable</td>
+	<td>countryTable.1.1</td>
+	<td>United States</td>
+</tr>
+<tr>
+	<td>verifyTable</td>
+	<td>countryTable.6.0</td>
+	<td>Spain</td>
+</tr>
+<tr>
+	<td>verifyTable</td>
+	<td>countryTable.6.1</td>
+	<td>Spain</td>
+</tr>
+<tr>
+	<td>waitForTextPresent</td>
+	<td>GROND version 0.1</td>
+	<td></td>
+</tr>
+<tr>
+	<td>click</td>
+	<td>//div[@id='countryBox']/table/tbody/tr[2]/td[2]/a</td>
+	<td></td>
+</tr>
+<tr>
+	<td>verifyTextPresent</td>
+	<td>Rating for United States</td>
+	<td></td>
+</tr>
+<tr>
+	<td>goBack</td>
+	<td></td>
+	<td></td>
+</tr>
+<tr>
+	<td>waitForTextPresent</td>
+	<td>Spain</td>
+	<td></td>
+</tr>
+<tr>
+	<td>assertTable</td>
+	<td>countryTable.0.0</td>
+	<td>Chronic Fatigue Syndrome</td>
+</tr>
+<tr>
+	<td>verifyTable</td>
+	<td>countryTable.0.1</td>
+	<td>Fibromyalgia</td>
+</tr>
+<tr>
+	<td>verifyTable</td>
+	<td>countryTable.1.0</td>
+	<td>United States</td>
+</tr>
+<tr>
+	<td>verifyTable</td>
+	<td>countryTable.1.1</td>
+	<td>United States</td>
+</tr>
+<tr>
+	<td>verifyTable</td>
+	<td>countryTable.6.0</td>
+	<td>Spain</td>
+</tr>
+<tr>
+	<td>verifyTable</td>
+	<td>countryTable.6.1</td>
+	<td>Spain</td>
+</tr>
+<!--Example counting table rows using XPath.-->
+<tr>
+	<td>assertXpathCount</td>
+	<td>//table[@id='countryTable']/tbody/tr</td>
+	<td>7</td>
+</tr>
+<!--Example counting table rows using JavaScript.-->
+<tr>
+	<td>runScript</td>
+	<td>javascript{selenium.browserbot.getUserWindow().document.getElementById('countryTable').rows.length &gt;= 7}</td>
+	<td></td>
+</tr>
+
+</tbody></table>
+</body>
+</html>
