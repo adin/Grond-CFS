@@ -6,8 +6,6 @@ import com.google.gwt.user.client.rpc.AsyncCallback;
  * The async counterpart of {@link Gae}.
  */
 public interface GaeAsync {
-  void ping(AsyncCallback<String> callback);
-
   void getCurrentUser(AsyncCallback<Gae.GwtUser> callback);
 
   void createLoginURL(String destinationURL, String authDomain, String federatedIdentity,

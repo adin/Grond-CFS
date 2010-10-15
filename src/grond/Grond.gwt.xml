@@ -7,6 +7,7 @@
   <inherits name="com.seventhdawn.gwt.rpc.scripttag.RPCOverScriptTag" />
   <!-- Logging; http://davidmaddison.blogspot.com/2009/07/gwt-logging-and-jsni.html -->
   <inherits name="com.maddison.gwt.logging.Logging" />
+  <inherits name="ru.glim.script_tag_rpc" />
 
   <!-- Inherit the default GWT style sheet.  You can change       -->
   <!-- the theme of your GWT application by uncommenting          -->

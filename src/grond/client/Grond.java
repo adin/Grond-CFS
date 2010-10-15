@@ -21,13 +21,11 @@ import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.Anchor;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.FlexTable;
-import com.google.gwt.user.client.ui.FlowPanel;
 import com.google.gwt.user.client.ui.HTML;
 import com.google.gwt.user.client.ui.HTMLPanel;
 import com.google.gwt.user.client.ui.HTMLTable;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.RootPanel;
-import com.google.gwt.user.client.ui.ScrollPanel;
 import com.google.gwt.user.client.ui.TextBox;
 import com.maddison.gwt.logging.client.Logger;
 import com.maddison.gwt.logging.client.Logging;
@@ -195,7 +193,7 @@ public class Grond implements EntryPoint, ValueChangeHandler {
       conditionAndCountries();
     } else if (token.equals("test_1mmheumpihd6h")) { // Unit tests.
       initCountryBox();
-      testInto(countries);
+      TestsRun.getInstance().testInto(countries);
     } else if (token.startsWith("mapOf_")) { // Country page.
       int secondUnderscore = token.indexOf('_', 6);
       if (secondUnderscore == -1) throw new RuntimeException("Wrong map token: " + token);
@@ -222,23 +220,6 @@ public class Grond implements EntryPoint, ValueChangeHandler {
     root.add(new Label(
         "Please enter your doctor's name and location. This is necessary to recognize one doctor from another."));
     // TODO: Get data necessary for doctorNameAndLocation.getRating.
-  }
-
-  protected void testInto(RootPanel root) {
-    final FlowPanel panel = new FlowPanel();
-    final ScrollPanel scroll = new ScrollPanel(panel);
-    root.add(scroll);
-
-    final HTML internalTests = new HTML();
-    panel.add(new Label("Internal tests:"));
-    panel.add(internalTests);
-    getLog().info("internal tests...");
-    getGae().internalTests(new Callback<String>() {
-      public void onSuccess(String result) {
-        getLog().info(result);
-        internalTests.setHTML(result);
-      }
-    });
   }
 
   /** Displays the condition and countries selector, leading to the map page of that country. */

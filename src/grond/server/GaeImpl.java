@@ -15,10 +15,6 @@ import com.google.gwt.user.server.rpc.RemoteServiceServlet;
  */
 @SuppressWarnings("serial")
 public class GaeImpl extends RemoteServiceServlet implements Gae {
-  public String ping() {
-    return "pong";
-  }
-
   public Gae.GwtUser getCurrentUser() {
     User user = UserServiceFactory.getUserService().getCurrentUser();
     if (user == null) return null;
@@ -44,20 +40,29 @@ public class GaeImpl extends RemoteServiceServlet implements Gae {
     return UserServiceFactory.getUserService().createLogoutURL(destinationURL);
   }
 
+  protected void pass(StringBuilder sb) {
+    sb.append("<span style=\"color: green\">pass</span>.<br/>");
+  }
+
+  protected void fail(StringBuilder sb, Throwable ex) {
+    StringWriter sw = new StringWriter();
+    PrintWriter pw = new PrintWriter(sw);
+    ex.printStackTrace(pw);
+    sb.append("<span style=\"color: red\">fail</span>!<pre style=\"color: red; font-size: smaller\">")
+        .append(sw.toString()).append("</pre>");
+  }
+
   public String internalTests() {
     StringBuilder sb = new StringBuilder();
+
     sb.append("doctorNameAndLocation .. ");
     try {
       grond.model.doctorNameAndLocation._test();
-      sb.append("<span style=\"color: green\">pass</span>.<br/>");
+      pass(sb);
     } catch (Throwable ex) {
-      StringWriter sw = new StringWriter();
-      PrintWriter pw = new PrintWriter(sw);
-      ex.printStackTrace(pw);
-      sb.append("<span style=\"color: red\">fail</span>!<pre style=\"color: red; font-size: smaller\">")
-          .append(sw.toString()).append("</pre>");
+      fail(sb, ex);
     }
+
     return sb.toString();
   }
-
 }

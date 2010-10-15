@@ -19,9 +19,6 @@ public interface Gae extends RemoteService {
     public boolean isAdmin;
   }
 
-  /** Check if the server is working. */
-  String ping();
-
   /** See if the user is logged in with the server. */
   GwtUser getCurrentUser();
 

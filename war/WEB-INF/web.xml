@@ -9,6 +9,7 @@
 		<filter-name>rpcJsonFilter</filter-name>
 		<filter-class>com.seventhdawn.gwt.rpc.scripttag.server.RPCJsonFilter</filter-class>
 	</filter>
+
 	<filter-mapping>
 		<filter-name>rpcJsonFilter</filter-name>
 		<servlet-name>gaeServlet</servlet-name>
@@ -19,11 +20,19 @@
 		<servlet-name>gaeServlet</servlet-name>
 		<servlet-class>grond.server.GaeImpl</servlet-class>
 	</servlet>
+  <servlet>
+    <servlet-name>testsServlet</servlet-name>
+    <servlet-class>grond.server.GaeTestsImpl</servlet-class>
+  </servlet>
 
 	<servlet-mapping>
 		<servlet-name>gaeServlet</servlet-name>
 		<url-pattern>/grond/gae</url-pattern>
 	</servlet-mapping>
+  <servlet-mapping>
+    <servlet-name>testsServlet</servlet-name>
+    <url-pattern>/grond/tests</url-pattern>
+  </servlet-mapping>
 
 	<!-- Default page to serve -->
 	<welcome-file-list>
