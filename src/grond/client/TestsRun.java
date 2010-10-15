@@ -138,10 +138,10 @@ public class TestsRun {
 
           final ClickHandler runTest = new ClickHandler() {
             public void onClick(ClickEvent event) {
+              final boolean autoRestart = (event == null);
               // Do not restart the test if it isn't finished yet.
-              if (status.getHTML().contains("⌚")) {
-                if (event != null) // From interface.
-                  status.setHTML("already! " + status.getHTML());
+              if (!autoRestart && status.getHTML().contains("⌚")) {
+                status.setHTML("already! " + status.getHTML());
                 return;
               }
 

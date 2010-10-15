@@ -70,9 +70,12 @@ class GaeTestsImpl extends HttpServlet {
     try {
       val hostUrl = getHostUrl (request)
       val firefox = grond.htmlunit.fun.FIREFOX3
-      request.getParameter ("test") match {
-        case "SVCCC" => new grond.htmlunit.SVCCC (firefox, hostUrl) .run
-        case "VCSRLODIC1" => new grond.htmlunit.VCSRLODIC1 (firefox, hostUrl) .run
+      firefox.synchronized { // On development server under Jetty this can run in parallel and face conflicts.
+        request.getParameter ("test") match {
+          case "SVCCC" => new grond.htmlunit.SVCCC (firefox, hostUrl) .run
+          case "VCSRLODIC1" => new grond.htmlunit.VCSRLODIC1 (firefox, hostUrl) .run
+          case "VCSRLODIC2" => new grond.htmlunit.VCSRLODIC2 (firefox, hostUrl) .run
+        }
       }
       respond ("okay")
     } catch {case ex => respond (trace (ex))}

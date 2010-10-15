@@ -1,34 +1,29 @@
 package grond.htmlunit
 
 import com.gargoylesoftware.htmlunit.{WebClient}
-import com.gargoylesoftware.htmlunit.html.{HtmlPage, HtmlTable, HtmlAnchor}
+import com.gargoylesoftware.htmlunit.html.{HtmlPage, HtmlTable, HtmlAnchor, HtmlButton}
+import scala.collection.JavaConversions._
 
+/**
+ * Going to main page and clicking on CFS/United States produces a button allowing us to rate a new doctor.
+ */
 class VCSRLODIC2 (webClient: WebClient, hostUrl: String) extends Test (webClient, hostUrl) {
   override def run: Unit = {
-      val log = org.apache.commons.logging.LogFactory.getLog ("com.gargoylesoftware.htmlunit")
-      log match {
-        case logger: org.apache.commons.logging.impl.Jdk14Logger =>
-          logger.getLogger.setLevel (java.util.logging.Level.SEVERE)
-        case ul => println ("grond.htmlunit.run: Unknown logger: " + ul.getClass.getName)
-      }
+    val page = getHtmlPage ()
+    webClient.waitForBackgroundJavaScript (1000)
+  
+    // Navigate to United States, CFS.
+    val countryTable = getHtmlTable (page, "//table[@id='countryTable']")
+    assert (countryTable.getCellAt (0, 0) .asText == "Chronic Fatigue Syndrome")
+    assert (countryTable.getCellAt (1, 0) .asText == "United States")
+    countryTable.getCellAt (1, 0) .getFirstByXPath ("a") .asInstanceOf[HtmlAnchor] .click
+    webClient.waitForBackgroundJavaScript (1000)
 
-      println (<span id="SVCCC">SVCCC: As site visitor, I can choose a condition (CFS/FM) and a country in which I am interested, to evaluate or improve the available healthcare information within that country.</span>)
-  
-      val page = webClient.getPage ("http://javagrond.appspot.com/") .asInstanceOf[HtmlPage]
-      assert (page.getTitleText == "GROND")
-  
-      // Navigate to United States, FM.
-      val countryTable = page.getHtmlElementById ("countryTable") .asInstanceOf[HtmlTable]
-      assert (countryTable.getCellAt (0, 1) .asText == "Fibromyalgia")
-      assert (countryTable.getCellAt (1, 1) .asText == "United States")
-      countryTable.getCellAt (1, 1) .getFirstByXPath ("a") .asInstanceOf[HtmlAnchor] .click
-  
-      assert (page.asText contains "Rating for United States")
-  
-      println ("""<script type="text/javascript">
-        document.getElementById ("SVCCC") .style.color = "green"
-      </script>""")
-  
-      //cms.writebr (<textarea style="width: 99%">{page.asXml}</textarea>)
+    // See if there is a button to rate new doctors.
+    var button: HtmlButton = null
+    page.getByXPath("//button[@class='gwt-Button']").foreach {case but: HtmlButton =>
+      if ((but.asText contains "doctor") && (but.asText contains "Click here to add")) button = but
+    }
+    assert (button ne null)
   }
 }

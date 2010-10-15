@@ -226,7 +226,7 @@ public class Grond implements EntryPoint, ValueChangeHandler {
   protected void conditionAndCountries() {
     // Prepare our table.
     final FlexTable table = new FlexTable();
-    table.getElement().setId("countryTable"); // For Selenium testing.
+    table.getElement().setId("countryTable"); // For automatic testing.
     // Table headers.
     table.setHTML(0, 0, "<span class=\"h3\">Chronic Fatigue Syndrome</span>");
     table.setHTML(0, 1, "<span class=\"h3\">Fibromyalgia</span>");
@@ -269,6 +269,7 @@ public class Grond implements EntryPoint, ValueChangeHandler {
     countries.add(new HTML("<br/>"));
 
     final FlexTable topDoctors = new FlexTable();
+    topDoctors.getElement().setId("topDoctors"); // For automatic testing.
     countries.add(topDoctors);
     topDoctors.setHTML(0, 0, "Name");
     topDoctors.setHTML(0, 1, country.id == "usa" ? "State" : "Region");
