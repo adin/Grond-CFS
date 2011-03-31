@@ -1,5 +1,4 @@
 package grond.model
-import java.{util => ju}
 import com.google.appengine.api.datastore._
 
 object Datastore {

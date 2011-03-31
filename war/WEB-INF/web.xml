@@ -1,40 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE web-app
-    PUBLIC "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN"
-    "http://java.sun.com/dtd/web-app_2_3.dtd">
+<!-- http://groups.google.com/group/google-appengine-java/browse_frm/thread/b49a4a0234e5c255/7c07a57fffd3b776 -->
+<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns="http://java.sun.com/xml/ns/javaee" xmlns:web="http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
+	xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
+	version="2.5">
 
-<web-app>
-
-	<filter>
-		<filter-name>rpcJsonFilter</filter-name>
-		<filter-class>com.seventhdawn.gwt.rpc.scripttag.server.RPCJsonFilter</filter-class>
-	</filter>
-
-	<filter-mapping>
-		<filter-name>rpcJsonFilter</filter-name>
-		<servlet-name>gaeServlet</servlet-name>
-	</filter-mapping>
-
-	<!-- Servlets -->
 	<servlet>
 		<servlet-name>gaeServlet</servlet-name>
 		<servlet-class>grond.server.GaeImpl</servlet-class>
 	</servlet>
-  <servlet>
-    <servlet-name>testsServlet</servlet-name>
-    <servlet-class>grond.server.GaeTestsImpl</servlet-class>
-  </servlet>
+	<servlet>
+		<servlet-name>testsServlet</servlet-name>
+		<servlet-class>grond.server.GaeTestsImpl</servlet-class>
+	</servlet>
 
 	<servlet-mapping>
 		<servlet-name>gaeServlet</servlet-name>
 		<url-pattern>/grond/gae</url-pattern>
 	</servlet-mapping>
-  <servlet-mapping>
-    <servlet-name>testsServlet</servlet-name>
-    <url-pattern>/grond/tests</url-pattern>
-  </servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>testsServlet</servlet-name>
+		<url-pattern>/grond/tests</url-pattern>
+	</servlet-mapping>
 
-	<!-- Default page to serve -->
 	<welcome-file-list>
 		<welcome-file>Grond.html</welcome-file>
 	</welcome-file-list>

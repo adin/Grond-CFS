@@ -8,18 +8,11 @@ import com.gargoylesoftware.htmlunit.html.{HtmlPage, HtmlTable, HtmlAnchor}
  */
 class VCSRLODIC1 (webClient: WebClient, hostUrl: String) extends Test (webClient, hostUrl) {
   override def run: Unit = {
-    val page = getHtmlPage ()
-    webClient.waitForBackgroundJavaScript (1000)
-  
-    // Navigate to United States, CFS.
-    val countryTable = getHtmlTable (page, "//table[@id='countryTable']")
-    assert (countryTable.getCellAt (0, 0) .asText == "Chronic Fatigue Syndrome")
-    assert (countryTable.getCellAt (1, 0) .asText == "United States")
-    countryTable.getCellAt (1, 0) .getFirstByXPath ("a") .asInstanceOf[HtmlAnchor] .click
-    webClient.waitForBackgroundJavaScript (1000)
+    val page = getPage ()
+    navigateToUsaCfs (page)
 
     // See if there is a non-empty table of doctors there.
-    val topDoctors = getHtmlTable (page, "//table[@id='topDoctors']")
+    val topDoctors = getTable (page, "//table[@id='topDoctors']")
     assert (topDoctors ne null)
     assert (topDoctors.getCellAt (0, 0) .asText == "Name")
     assert (topDoctors.getCellAt (0, 1) .asText == "State")

@@ -6,6 +6,7 @@ import scala.collection.JavaConversions._
 import com.google.appengine.api.users.{UserServiceFactory, User}
 import com.google.appengine.api.datastore._
 import grond.model.Datastore.implicits._
+import grond.htmlunit.fun.randomAlphabeticalString
 
 /**
  * This object helps finding or creating doctor's ratings.<br>
@@ -13,12 +14,12 @@ import grond.model.Datastore.implicits._
  */
 object doctorNameAndLocation { import doctorNameAndLocationUtility._, util._
   def _test: Unit = {
-    val random = new scala.util.Random
-    def randString = random.nextString (2 + random.nextInt (3))
+    val random = new java.util.Random
+    def randString = randomAlphabeticalString (random)
     val user = new User (randString, randString, randString, randString)
     var outerDoctor: Doctor = null
     try {
-      val (doctor, rating) = getRating (user,
+      val (doctor, rating, isNew) = getRating (user,
         doctorFirstName = randString, doctorLastName = randString,
         country = "testCountry", region = randString, city = randString,
         problem = if (random.nextBoolean) "cfs" else "fm")
@@ -41,10 +42,14 @@ object doctorNameAndLocation { import doctorNameAndLocationUtility._, util._
   /** This method's parameters uniquely identify one of doctor's ratings
    * (there can't be two doctors with the same name and location,
    * and there can't be two ratings of that doctor from the same user).
-   * The method will create the doctor and the rating if they do not exist. */
+   * The method will create the doctor and the rating if they do not exist.<br>
+   * Returns `true` if a new doctor entry was created. */
   def getRating (user: User,
     doctorFirstName: String, doctorLastName: String,
-    country: String, region: String, city: String, problem: String): (Doctor, Rating) = {
+    country: String, region: String, city: String, problem: String): (Doctor, Rating, Boolean) = {
+
+    // TODO: Additional checks for all parameters?
+    // (Like name and surname starting with a capital and not being a single letter).
 
     if (user eq null) throw new UserException (
       "You are not signed in! You must sign in to submit the info.", 1)
@@ -69,10 +74,15 @@ object doctorNameAndLocation { import doctorNameAndLocationUtility._, util._
     if (isEmpty (firstName) || isEmpty (lastName)) throw new UserException (
       "You haven't filled the doctor's name.", 2)
 
+    if (!firstName.matches("^\\w+.*") || !lastName.matches("^\\w+.*")) throw new UserException (
+      "Doctor name seems to be wrong.", 2)
+    if (firstName.matches("^\\d+") || lastName.matches("^\\d+")) throw new UserException (
+      "Doctor name seems to be wrong.", 2)
+
     val tCountry = country.trim
     if (isEmpty (tCountry)) throw new UserException (
       "You haven't filled the country.", 3)
-    val ttCountry = grond.shared.Countries.COUNTRIES.find (_.name == tCountry)
+    val ttCountry = grond.shared.Countries.COUNTRIES.find (_.id == tCountry)
     if (ttCountry.isEmpty && tCountry != "testCountry") throw new UserException (
       "Internal error: Unknown country name!", 3)
 
@@ -83,7 +93,7 @@ object doctorNameAndLocation { import doctorNameAndLocationUtility._, util._
     val tProblem = problem; if (isEmpty (tProblem)) throw new UserException (
       "You haven't selected the diagnosis.", 3)
 
-    val doctor = newOrExistingDoctor (country, region, city, firstName, lastName)
+    val (doctor, doctorCreated) = newOrExistingDoctor (country, region, city, firstName, lastName)
     val rating = newOrExistingRating (doctor, user)
 
     // Save doctor's data not used during Entity creation.
@@ -99,7 +109,9 @@ object doctorNameAndLocation { import doctorNameAndLocationUtility._, util._
 
     // Save rating.
     Datastore.SERVICE.put (rating)
-    (Doctor (KeyFactory.keyToString (doctor.getKey)), Rating (KeyFactory.keyToString (rating.getKey)))
+    (Doctor (KeyFactory.keyToString (doctor.getKey)),
+     Rating (KeyFactory.keyToString (rating.getKey)),
+     doctorCreated)
   }
 
   def findRatings (user: User): ju.List[Entity] = {
@@ -124,9 +136,10 @@ object doctorNameAndLocation { import doctorNameAndLocationUtility._, util._
 
 object doctorNameAndLocationUtility {
   /** Retrieve doctor Entity using doctor's name and location
-   * or create a new one if not found. */
+   * or create a new one if not found.<br>
+   * Returns `true` if a new doctor entry was created. */
   def newOrExistingDoctor (country: String, region: String, city: String,
-  firstName: String, lastName: String): Entity = {
+  firstName: String, lastName: String): (Entity, Boolean) = {
 
     val query = new Query ("Doctor")
     // NB: In order for these equality filters to work the fields must use the automatic indexing (e.g. setProperty).
@@ -138,7 +151,7 @@ object doctorNameAndLocationUtility {
     query.addFilter ("firstName", Query.FilterOperator.EQUAL, firstName)
     query.addFilter ("lastName", Query.FilterOperator.EQUAL, lastName)
     val doctor = Datastore.SERVICE.prepare (query) .asSingleEntity
-    if (doctor ne null) doctor else {
+    if (doctor ne null) (doctor, false) else {
       val doctor = new Entity ("Doctor")
       doctor.setProperty ("country", country)
       doctor.setProperty ("region", region)
@@ -147,7 +160,7 @@ object doctorNameAndLocationUtility {
       doctor.setProperty ("lastName", lastName)
       Datastore.SERVICE.put (doctor)
       println ("doctorNameAndLocation; new doctor: " + doctor)
-      doctor
+      (doctor, true)
     }
   }
   /** Create new rating, but only once (one doctor rating per user). New rating's aren't persisted. */

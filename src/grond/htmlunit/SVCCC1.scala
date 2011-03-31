@@ -7,16 +7,14 @@ import com.gargoylesoftware.htmlunit.html.{HtmlPage, HtmlTable, HtmlAnchor}
  * produces a page with information about United States. */
 class SVCCC (webClient: WebClient, hostUrl: String) extends Test (webClient, hostUrl) {
   override def run: Unit = {
-    val page = getHtmlPage ()
-    webClient.waitForBackgroundJavaScript (1000)
+    val page = getPage ()
     assert (page.getTitleText == "GROND")
 
     // Navigate to United States, FM.
-    val countryTable = getHtmlTable (page, "//table[@id='countryTable']")
+    val countryTable = getTable (page, "//table[@id='countryTable']")
     assert (countryTable.getCellAt (0, 1) .asText == "Fibromyalgia")
     assert (countryTable.getCellAt (1, 1) .asText == "United States")
     countryTable.getCellAt (1, 1) .getFirstByXPath ("a") .asInstanceOf[HtmlAnchor] .click
-    webClient.waitForBackgroundJavaScript (1000)
 
     var text = page.asText
     assert (text contains "Rating for United States")

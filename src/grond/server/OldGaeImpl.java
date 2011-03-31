@@ -1,6 +1,6 @@
 package grond.server;
 
-import grond.client.Gae;
+import grond.client.OldGae;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -14,11 +14,11 @@ import com.google.gwt.user.server.rpc.RemoteServiceServlet;
  * The server side implementation of the RPC service.
  */
 @SuppressWarnings("serial")
-public class GaeImpl extends RemoteServiceServlet implements Gae {
-  public Gae.GwtUser getCurrentUser() {
+public class OldGaeImpl extends RemoteServiceServlet implements OldGae {
+  public OldGae.GwtUser getCurrentUser() {
     User user = UserServiceFactory.getUserService().getCurrentUser();
     if (user == null) return null;
-    Gae.GwtUser gwtUser = new Gae.GwtUser();
+    OldGae.GwtUser gwtUser = new OldGae.GwtUser();
     gwtUser.email = user.getEmail();
     gwtUser.authDomain = user.getAuthDomain();
     gwtUser.userId = user.getUserId();

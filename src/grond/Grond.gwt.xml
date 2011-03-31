@@ -3,11 +3,11 @@
   <!-- Inherit the core Web Toolkit stuff.                        -->
   <inherits name='com.google.gwt.user.User'/>
 
-  <!-- http://code.google.com/p/rcx/ -->
-  <inherits name="com.seventhdawn.gwt.rpc.scripttag.RPCOverScriptTag" />
-  <!-- Logging; http://davidmaddison.blogspot.com/2009/07/gwt-logging-and-jsni.html -->
-  <inherits name="com.maddison.gwt.logging.Logging" />
-  <inherits name="ru.glim.script_tag_rpc" />
+  <!-- JSON RPC: -->
+  <inherits name='com.google.gwt.jsonp.Jsonp' />
+
+  <!-- http://code.google.com/webtoolkit/doc/latest/DevGuideLogging.html -->
+  <inherits name="com.google.gwt.logging.Logging" />
 
   <!-- Inherit the default GWT style sheet.  You can change       -->
   <!-- the theme of your GWT application by uncommenting          -->
@@ -33,4 +33,5 @@
   <source path='client'/>
   <source path='shared'/>
 
+  <set-property name="gwt.logging.popupHandler" value="DISABLED" />
 </module>

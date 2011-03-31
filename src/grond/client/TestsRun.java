@@ -2,13 +2,14 @@ package grond.client;
 
 import java.util.Arrays;
 import java.util.LinkedList;
-
-import ru.glim.client.ScriptTag;
+import java.util.logging.Logger;
 
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.Document;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.http.client.URL;
+import com.google.gwt.jsonp.client.JsonpRequestBuilder;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.Button;
@@ -31,7 +32,6 @@ public class TestsRun {
 
   protected Panel testsPanel;
   protected int warmCounter = 0;
-  protected final ScriptTag scriptTag = new ScriptTag(GWT.getModuleBaseURL() + "tests", "callback");
 
   protected TestsRun() {}
 
@@ -45,14 +45,31 @@ public class TestsRun {
     }
   }
 
+  /** Invokes a "tests" servlet returning a string. */
+  void testsString(AsyncCallback<String> callback, String... parameters) {
+    final JsonpRequestBuilder jsonp = new JsonpRequestBuilder();
+    jsonp.setTimeout(40000); // Default TCP/IP timeout + 10 seconds.
+
+    String url = GWT.getModuleBaseURL() + "tests";
+    for (int i = 0; i < parameters.length - 1; i += 2) {
+      url += (i == 0 ? '?' : '&') + URL.encodeQueryString(parameters[i]) + '='
+          + URL.encodeQueryString(parameters[i + 1]);
+    }
+
+    jsonp.requestString(url, callback);
+  }
+
   protected Panel getTestsPanel() {
     if (testsPanel != null) return testsPanel;
 
     final FlexTable table = new FlexTable();
     final ScrollPanel scroll = new ScrollPanel(table);
-    scroll.setHeight((Document.get().getScrollHeight() * 90 / 100) + "px");
+    // getScrollHeight currently returns 0 on Google Chrome 7, therefore we protect it with Math.max.
+    final int scrollHeight = Math.max(500, Document.get().getScrollHeight());
+    scroll.setHeight((scrollHeight * 90 / 100) + "px");
 
-    final LinkedList<String> tests = new LinkedList<String>(Arrays.asList("SVCCC", "VCSRLODIC1", "VCSRLODIC2"));
+    final LinkedList<String> tests = new LinkedList<String>(Arrays.asList("UEDNL", "VCSRLODIC1", "VCSRLODIC2",
+        "SVCCC"));
 
     final HTML internalTests = new HTML("warming up");
     table.setWidget(0, 0, new Label("Internal tests:"));
@@ -61,22 +78,25 @@ public class TestsRun {
 
     // Warming cycle. Keep several application instances online.
     final Timer warmingTimer = new Timer() {
+      boolean internalTestsStarted = false;
+
       @Override
       public void run() {
         // Slow down when all tests have fired.
         if (tests.isEmpty()) this.schedule(10000);
         else this.schedule(2000 / tests.size());
 
-        scriptTag.invoke(new Callback<String>() {
+        testsString(new Callback<String>() {
           public void onSuccess(String result) {
             warmCounter += 1;
           }
         }, "gaeSpinUp", "true");
 
-        if (warmCounter == 3) {
+        if (warmCounter >= 3 && !internalTestsStarted) {
           // Run internal tests after spinUp.
+          internalTestsStarted = true;
           internalTests.setHTML("running");
-          scriptTag.invoke(new Callback<String>() {
+          testsString(new Callback<String>() {
             public void onSuccess(String result) {
               internalTests.setHTML(result);
             }
@@ -119,15 +139,16 @@ public class TestsRun {
                 status.setHTML("<span style=\"color: green\">pass</span>.");
                 statusScroll.getElement().getStyle().clearWidth();
                 statusScroll.getElement().getStyle().clearHeight();
-              } else if (timeouts < 1 && result.contains("Timeout while fetching")) { // Repeat the test.
+              } else if (timeouts < 2 && result.contains("Timeout while fetching")) { // Repeat the test.
                 ++timeouts;
                 runTestPtr.get(0).onClick(null);
               } else {
-                status.setHTML("<pre style=\"color: red; font-size: smaller\">fail!\n" + result + "</pre>");
+                status.setHTML("<pre style=\"color: red; font-size: smaller\">fail!\n"
+                    + result.replaceAll("\\<", "&lt;") + "</pre>");
                 if (status.getOffsetWidth() > Document.get().getScrollWidth() * 70 / 100
-                    || status.getOffsetHeight() > Document.get().getScrollHeight() * 70 / 100) {
+                    || status.getOffsetHeight() > scrollHeight * 70 / 100) {
                   statusScroll.setWidth((Document.get().getScrollWidth() * 70 / 100) + "px");
-                  statusScroll.setHeight((Document.get().getScrollHeight() * 70 / 100) + "px");
+                  statusScroll.setHeight((scrollHeight * 70 / 100) + "px");
                 } else {
                   statusScroll.getElement().getStyle().clearWidth();
                   statusScroll.getElement().getStyle().clearHeight();
@@ -148,7 +169,7 @@ public class TestsRun {
               // Show that we started the test.
               status.setHTML("⌚");
 
-              scriptTag.invoke(callback, "test", test);
+              testsString(callback, "test", test);
             }
           };
           runTestPtr.add(runTest);

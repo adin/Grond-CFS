@@ -4,14 +4,18 @@ import grond.shared.Countries;
 import grond.shared.Countries.Country;
 
 import java.util.Arrays;
+import java.util.logging.Logger;
 
 import com.google.gwt.core.client.EntryPoint;
-import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.Document;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.Style.Unit;
+import com.google.gwt.event.dom.client.ChangeEvent;
+import com.google.gwt.event.dom.client.ChangeHandler;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.dom.client.KeyUpEvent;
+import com.google.gwt.event.dom.client.KeyUpHandler;
 import com.google.gwt.event.logical.shared.ValueChangeEvent;
 import com.google.gwt.event.logical.shared.ValueChangeHandler;
 import com.google.gwt.user.client.DOM;
@@ -24,40 +28,33 @@ import com.google.gwt.user.client.ui.FlexTable;
 import com.google.gwt.user.client.ui.HTML;
 import com.google.gwt.user.client.ui.HTMLPanel;
 import com.google.gwt.user.client.ui.HTMLTable;
+import com.google.gwt.user.client.ui.InlineHTML;
+import com.google.gwt.user.client.ui.InlineLabel;
 import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.ListBox;
+import com.google.gwt.user.client.ui.PopupPanel;
 import com.google.gwt.user.client.ui.RootPanel;
 import com.google.gwt.user.client.ui.TextBox;
-import com.maddison.gwt.logging.client.Logger;
-import com.maddison.gwt.logging.client.Logging;
 
 /**
  * Our main class.
  */
 public class Grond implements EntryPoint, ValueChangeHandler {
-  /** {@link AsyncCallback} with standard error handler. */
-  public abstract class Callback<T> implements AsyncCallback<T> {
-    public void onFailure(Throwable caught) {
-      serverError();
-    }
-  }
-
-  protected Logger log = null;
-  protected GaeAsync gae = null;
+  /** Region selector, updated via AmMap.
+   * @see #rateFormInto
+   * @see #amRegisterClick */
+  protected static ListBox REGION = null;
   /** Panel containing the country and condition selector (in "countryBox" on the page).
    * @see #countryBox */
   protected RootPanel countries = null;
   /** The DOM element where the {@link #countries} panel is located. */
   protected Element countryBox = null;
 
-  /** The server side. */
-  protected GaeAsync getGae() {
-    if (gae == null) gae = GWT.create(Gae.class);
-    return gae;
-  }
-
-  protected Logger getLog() {
-    if (log == null) log = Logging.getLogger();
-    return log;
+  /** {@link AsyncCallback} with standard error handler. */
+  public abstract class Callback<T> implements AsyncCallback<T> {
+    public void onFailure(Throwable caught) {
+      serverError();
+    }
   }
 
   /** Displays a error message when AsyncCallback fails. */
@@ -71,16 +68,24 @@ public class Grond implements EntryPoint, ValueChangeHandler {
     History.addValueChangeHandler(this);
     onHistoryChange(History.getToken());
 
-    getGae().getCurrentUser(new Callback<Gae.GwtUser>() {
-      public void onSuccess(Gae.GwtUser user) {
+    getGae().getCurrentUser(new Callback<GwtUser>() {
+      public void onSuccess(GwtUser user) {
         statusLine(user);
       }
     });
   }
 
+  protected Logger getLog() {
+    return Logger.getLogger("Grond");
+  }
+
+  protected Gae getGae() {
+    return new Gae();
+  }
+
   /** Creates a status line which shows that the GROND server is available
    * and whether the current visitor is signed in. */
-  protected void statusLine(Gae.GwtUser user) {
+  protected void statusLine(GwtUser user) {
     // Add status line after country box.
     // RootPanel should be at the root of any GWT hierarchy in order for the GWT events to work.
     Element div = DOM.createDiv();
@@ -107,13 +112,13 @@ public class Grond implements EntryPoint, ValueChangeHandler {
       final Anchor signOut = new Anchor("Sign out<br/>", true);
       signOut.addClickHandler(new ClickHandler() {
         public void onClick(ClickEvent event) {
-          String href = Window.Location.getHref();
-          getGae().createLogoutURL(href, new Callback<String>() {
+          final String href = Window.Location.getHref();
+          getGae().gaeString(new Callback<String>() {
             public void onSuccess(String url) {
               getLog().info("Logout URL: " + url);
               Window.Location.replace(url);
             }
-          });
+          }, "op", "createLogoutURL", "destinationURL", href);
         }
       });
       panel.add(signOut, "g.login");
@@ -149,7 +154,7 @@ public class Grond implements EntryPoint, ValueChangeHandler {
       public void onClick(ClickEvent event) {
         getGae().createLoginURL(href, host, "http://yahoo.com/", new Callback<String>() {
           public void onSuccess(String url) {
-            getLog().info("Google login: " + url);
+            getLog().info("Yahoo login: " + url);
             Window.Location.replace(url);
           }
         });
@@ -215,11 +220,148 @@ public class Grond implements EntryPoint, ValueChangeHandler {
     }
   }
 
-  protected void rateFormInto(RootPanel root, String countryId, String condition) {
+  /** A form with information necessary to proceed to the rating (doctor's name and location). */
+  protected void rateFormInto(final RootPanel root, final String countryId, final String condition) {
     root.add(new Label("Thanks for participating!"));
     root.add(new Label(
         "Please enter your doctor's name and location. This is necessary to recognize one doctor from another."));
-    // TODO: Get data necessary for doctorNameAndLocation.getRating.
+    root.add(new HTML("<div id='ammap'/>"));
+    ammap();
+
+    final Country country = Countries.getCountry(countryId);
+    // http://google-web-toolkit.googlecode.com/svn/javadoc/2.1/com/google/gwt/user/client/ui/ListBox.html
+    REGION = new ListBox();
+    for (String title : country.getRegions()) {
+      REGION.addItem(title);
+    }
+    root.add(new InlineLabel("State: "));
+    REGION.getElement().setId("dnl-region");
+    root.add(REGION);
+    root.add(new InlineHTML("<br/>"));
+
+    root.add(new InlineLabel("City:"));
+    final TextBox city = new TextBox();
+    city.getElement().setId("dnl-city");
+    root.add(city);
+    root.add(new InlineHTML("<br/>"));
+
+    root.add(new InlineLabel("Name:"));
+    final TextBox name = new TextBox();
+    name.getElement().setId("dnl-name");
+    root.add(name);
+    root.add(new InlineHTML("<br/>"));
+
+    root.add(new InlineLabel("Surname:"));
+    final TextBox surname = new TextBox();
+    surname.getElement().setId("dnl-surname");
+    root.add(surname);
+    root.add(new InlineHTML("<br/>"));
+
+    final Button next = new Button("Next");
+    next.getElement().setId("dnl-next");
+    next.setEnabled(false);
+
+    final KeyUpHandler nextEnabler = new KeyUpHandler() {
+      public void onKeyUp(KeyUpEvent event) {
+        next.setEnabled(city.getValue().length() != 0 && name.getValue().length() != 0
+            && surname.getValue().length() != 0);
+      }
+    };
+    final ChangeHandler nextEnabler2 = new ChangeHandler() {
+      public void onChange(ChangeEvent event) {
+        nextEnabler.onKeyUp(null);
+      }
+    };
+    // We need both KeyUpHandler and ChangeHandler:
+    // KeyUpHandler to react immediately when the field is edited with keyboard
+    // and ChangeHandler to react at all if the field is changed by mouse, javascript or unit tests.
+    city.addKeyUpHandler(nextEnabler);
+    city.addChangeHandler(nextEnabler2);
+    name.addKeyUpHandler(nextEnabler);
+    name.addChangeHandler(nextEnabler2);
+    surname.addKeyUpHandler(nextEnabler);
+    surname.addChangeHandler(nextEnabler2);
+
+    // TODO: Implement doctor suggestions.
+    final KeyUpHandler suggest = new KeyUpHandler() {
+      public void onKeyUp(final KeyUpEvent event) {
+        if (event.getSource() == city) {
+          final PopupPanel popup = new PopupPanel() {
+            {
+              setWidget(new Label("test"));
+            }
+          };
+          popup.show();
+        }
+      }
+    };
+    city.addKeyUpHandler(suggest);
+    name.addKeyUpHandler(suggest);
+    surname.addKeyUpHandler(suggest);
+
+    final HTML errorMessage = new HTML("");
+    errorMessage.getElement().setId("dnl-error");
+    errorMessage.addStyleName("error");
+    root.add(errorMessage);
+
+    next.addClickHandler(new ClickHandler() {
+      public void onClick(final ClickEvent event) {
+        final String region = REGION.getValue(REGION.getSelectedIndex());
+
+        // Send doctor information to the server.
+        getGae().nameAndLocation(countryId, region, city.getValue(), name.getValue(), surname.getValue(),
+            condition, new Callback<GaeResponse>() {
+              public void onSuccess(GaeResponse result) {
+                if (result.errorMessage.length() != 0) {
+                  errorMessage.setHTML(result.toString());
+                  Window.alert(result.toString());
+                } else {
+                  final String[] results = result.successMessage.split("\\;", 0);
+                  final String ratingId = results[0];
+                  assert ratingId.length() > 10 : "ratingId is too short";
+                  Logger.getLogger("nameAndLocation").info("Got rating id: " + ratingId); // delme
+                  root.clear();
+                  final String doctorCreated = results[1];
+                  if (doctorCreated.equals("true")) {
+                    root.add(new Label("Thanks for telling us about this practitioner!"));
+                  } else {
+                    root.add(new Label("This practicioner is withing our database."
+                        + " Please go on with your rating!"));
+                  }
+                  root.add(new Label("TBD: The rating form will begin there."));
+                  // TODO
+                }
+              }
+            });
+      }
+    });
+    root.add(next);
+  }
+
+  /** Load AmMap into `ammap` element. */
+  native void ammap() /*-{
+    // Callback the AmMap will invoke when a region is clicked.
+    $wnd.amRegisterClick = $entry(@grond.client.Grond::amRegisterClick(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;));
+    // http://www.ammap.com/docs/v.2/basics/adding_map_to_a_page
+    var mapArgs = {
+      path: '/ammap/',
+      settings_file: '/ammap/_countries/usa/ammap_settings.xml',
+      data_file: '/ammap/_countries/usa/ammap_data.xml'
+    }
+    // http://code.google.com/p/swfobject/wiki/documentation
+    $wnd.swfobject.embedSWF ("/ammap/ammap.swf", "ammap", 800, 300, "9.0.0", null, mapArgs)
+  }-*/;
+
+  /** AmMap callback. All parameters are null except `title`, which is a region name. */
+  public static void amRegisterClick(final String map_id, final String object_id, final String title,
+      final String value) {
+    Logger.getLogger("amRegisterClick").info("Got a click from AmMap; title: " + title);
+    if (REGION != null) {
+      for (int i = 0; i < REGION.getItemCount(); ++i) {
+        final String text = REGION.getItemText(i);
+        if (text.equals(title)) REGION.setItemSelected(i, true);
+      }
+    }
   }
 
   /** Displays the condition and countries selector, leading to the map page of that country. */
@@ -289,8 +431,8 @@ public class Grond implements EntryPoint, ValueChangeHandler {
 
       public void onClick(ClickEvent event) {
         if (loginIsVisible) return;
-        getGae().getCurrentUser(new Callback<Gae.GwtUser>() {
-          public void onSuccess(Gae.GwtUser user) {
+        getGae().getCurrentUser(new Callback<GwtUser>() {
+          public void onSuccess(GwtUser user) {
             if (user == null) {
               int widgetIndex = countries.getWidgetIndex(addDoc);
               countries.remove(widgetIndex);
@@ -319,7 +461,7 @@ public class Grond implements EntryPoint, ValueChangeHandler {
    * <pre>perl -e 'print int (rand (99999999)) . "\n"'</pre> */
   protected void affirm(boolean expression, int errorCode) {
     if (expression) return;
-    getLog().error("Assertion failed! Error code: " + errorCode);
+    getLog().severe("Assertion failed! Error code: " + errorCode);
     throw new RuntimeException("Assertion failed! Error code: " + errorCode);
   }
 

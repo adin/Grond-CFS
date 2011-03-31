@@ -11,7 +11,7 @@ class GaeTestsImpl extends HttpServlet {
       var localName = request.getLocalName
       if (localName == null) localName = "javagrond.appspot.com" // Happens to be null when deployed.
       if (localName.equals ("0:0:0:0:0:0:0:1")) localName = "localhost" // Happens on test server.
-      return request.getScheme + "://" + localName + ":" + (if (port == 0 || port == 80) "" else port) + "/"
+      return request.getScheme + "://" + localName + (if (port == 0 || port == 80) "" else ":" + port) + "/"
     } catch {case ex =>
       ex.printStackTrace();
       return "http://127.0.0.1:8888/";
@@ -39,9 +39,7 @@ class GaeTestsImpl extends HttpServlet {
     sb.toString
   }
 
-  /** Servlet's main method.<br>
-   * Static files are handled separately by the web server,
-   * that leaves us with handling of Velocity templates and form actions. */
+  /** Servlet's main method. */
   protected def welcome (request: HttpServletRequest, response: HttpServletResponse): Unit = {
     response.setContentType ("text/javascript")
     response.setCharacterEncoding ("utf-8")
@@ -63,18 +61,22 @@ class GaeTestsImpl extends HttpServlet {
       writer.write (com.google.appengine.repackaged.org.json.JSONObject.quote (str))
       writer.write (");")
     }
-    
-    if (request.getParameter ("gaeSpinUp") == "true") {respond ("okay"); return}
+
+    if (request.getParameter ("gaeSpinUp") == "true") {grond.htmlunit.fun.gaeSpinUp; respond ("okay"); return}
     if (request.getParameter ("internalTests") == "true") {respond (internalTests); return}
 
     try {
       val hostUrl = getHostUrl (request)
       val firefox = grond.htmlunit.fun.FIREFOX3
       firefox.synchronized { // On development server under Jetty this can run in parallel and face conflicts.
+        // We need this for GWT RPC to work (see also http://htmlunit.sourceforge.net/faq.html#AJAXDoesNotWork).
+        firefox.setAjaxController (new com.gargoylesoftware.htmlunit.NicelyResynchronizingAjaxController)
+
         request.getParameter ("test") match {
-          case "SVCCC" => new grond.htmlunit.SVCCC (firefox, hostUrl) .run
+          case "UEDNL" => new grond.htmlunit.UEDNL (firefox, hostUrl) .run
           case "VCSRLODIC1" => new grond.htmlunit.VCSRLODIC1 (firefox, hostUrl) .run
           case "VCSRLODIC2" => new grond.htmlunit.VCSRLODIC2 (firefox, hostUrl) .run
+          case "SVCCC" => new grond.htmlunit.SVCCC (firefox, hostUrl) .run
         }
       }
       respond ("okay")
