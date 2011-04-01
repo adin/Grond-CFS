@@ -12,10 +12,12 @@ public class Countries {
     public final String name;
     /** See http://en.wikipedia.org/wiki/ISO_3166-1_alpha-3 */
     public final String id;
+    public final String mapFolder;
 
-    public Country(String name, String id) {
+    public Country(String name, String id, String mapFolder) {
       this.name = name;
       this.id = id;
+      this.mapFolder = mapFolder;
       assert id.length() == 3 : id;
     }
 
@@ -37,9 +39,10 @@ public class Countries {
     }
   }
   /** Countries supported by our program. */
-  public final static List<Country> COUNTRIES = Arrays.asList(new Country("United States", "usa"),
-      new Country("Canada", "can"), new Country("United Kingdom", "gbr"), new Country("Australia", "aus"),
-      new Country("New Zealand", "nzl"), new Country("Spain", "esp"));
+  public final static List<Country> COUNTRIES = Arrays.asList(new Country("United States", "usa", "usa"),
+      new Country("Canada", "can", "canada"), new Country("United Kingdom", "gbr", "united_kingdom"),
+      new Country("Australia", "aus", "australia"), new Country("New Zealand", "nzl", "new_zealand"),
+      new Country("Spain", "esp", "spain1"));
 
   public static Country getCountry(final String countryId) {
     for (final Country country : COUNTRIES)

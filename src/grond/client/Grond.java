@@ -200,10 +200,9 @@ public class Grond implements EntryPoint, ValueChangeHandler {
       initCountryBox();
       TestsRun.getInstance().testInto(countries);
     } else if (token.startsWith("mapOf_")) { // Country page.
-      int secondUnderscore = token.indexOf('_', 6);
-      if (secondUnderscore == -1) throw new RuntimeException("Wrong map token: " + token);
-      String countryId = token.substring(6, secondUnderscore);
-      String condition = token.substring(secondUnderscore + 1);
+      final String[] parts = parseMapOfToken(token);
+      final String countryId = parts[0];
+      final String condition = parts[1];
       for (Country country : Countries.COUNTRIES) {
         if (countryId.equals(country.id)) {
           initCountryBox();
@@ -217,7 +216,19 @@ public class Grond implements EntryPoint, ValueChangeHandler {
       String condition = token.substring(secondUnderscore + 1);
       initCountryBox();
       rateFormInto(countries, countryId, condition);
+    } else if (token.startsWith("ratingsIn_")) { // Region page.
+      initCountryBox();
+      // ...
     }
+  }
+
+  protected static String[] parseMapOfToken(final String mapOfToken) {
+    assert (mapOfToken.startsWith("mapOf_"));
+    final int secondUnderscore = mapOfToken.indexOf('_', 6);
+    if (secondUnderscore == -1) throw new RuntimeException("Wrong map token: " + mapOfToken);
+    final String countryId = mapOfToken.substring(6, secondUnderscore);
+    final String condition = mapOfToken.substring(secondUnderscore + 1);
+    return new String[] { countryId, condition };
   }
 
   /** A form with information necessary to proceed to the rating (doctor's name and location). */
@@ -226,9 +237,9 @@ public class Grond implements EntryPoint, ValueChangeHandler {
     root.add(new Label(
         "Please enter your doctor's name and location. This is necessary to recognize one doctor from another."));
     root.add(new HTML("<div id='ammap'/>"));
-    ammap();
-
     final Country country = Countries.getCountry(countryId);
+    ammap(country.mapFolder);
+
     // http://google-web-toolkit.googlecode.com/svn/javadoc/2.1/com/google/gwt/user/client/ui/ListBox.html
     REGION = new ListBox();
     for (String title : country.getRegions()) {
@@ -339,15 +350,17 @@ public class Grond implements EntryPoint, ValueChangeHandler {
   }
 
   /** Load AmMap into `ammap` element. */
-  native void ammap() /*-{
+  native void ammap(String mapFolder) /*-{
     // Callback the AmMap will invoke when a region is clicked.
     $wnd.amRegisterClick = $entry(@grond.client.Grond::amRegisterClick(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;));
     // http://www.ammap.com/docs/v.2/basics/adding_map_to_a_page
     var mapArgs = {
       path: '/ammap/',
-      settings_file: '/ammap/_countries/usa/ammap_settings.xml',
-      data_file: '/ammap/_countries/usa/ammap_data.xml'
+      settings_file: '/ammap/_countries/' + mapFolder + '/ammap_settings.xml',
+      data_file: '/ammap/_countries/' + mapFolder + '/ammap_data.xml'
     }
+    if ($doc.getElementById('ammap') == null) alert ("Internal error: 'ammap' div not found!");
+    if ($wnd.swfobject == null) alert ("Internal error: swfobject not loaded!");
     // http://code.google.com/p/swfobject/wiki/documentation
     $wnd.swfobject.embedSWF ("/ammap/ammap.swf", "ammap", 800, 300, "9.0.0", null, mapArgs)
   }-*/;
@@ -356,7 +369,13 @@ public class Grond implements EntryPoint, ValueChangeHandler {
   public static void amRegisterClick(final String map_id, final String object_id, final String title,
       final String value) {
     Logger.getLogger("amRegisterClick").info("Got a click from AmMap; title: " + title);
-    if (REGION != null) {
+    if (title == null) return; // Ignore clicks on empty space.
+    if (REGION == null) {
+      final String[] parts = parseMapOfToken(History.getToken());
+      final String countryId = parts[0];
+      final String condition = parts[1];
+      History.newItem("ratingsIn_" + countryId + '_' + title.replaceAll("\\W\\_\\s", "") + '_' + condition);
+    } else {
       for (int i = 0; i < REGION.getItemCount(); ++i) {
         final String text = REGION.getItemText(i);
         if (text.equals(title)) REGION.setItemSelected(i, true);
@@ -450,7 +469,8 @@ public class Grond implements EntryPoint, ValueChangeHandler {
 
     countries.add(new HTML("<br/>"));
 
-    countries.add(new Label("Map for " + country.name));
+    countries.add(new HTML("<div id='ammap'/>"));
+    ammap(country.mapFolder);
 
     // Make sure we have space for all the doctors and the login form.
     countryBox.getStyle().setHeight(countries.getOffsetHeight() + 70, Unit.PX);
