@@ -18,7 +18,7 @@ class SVCCC (webClient: WebClient, hostUrl: String) extends Test (webClient, hos
 
     var text = page.asText
     assert (text contains "Rating for United States")
-    assert (text contains "Map for United States")
+    assert (page.asXml contains "settings_file=/ammap/_countries/usa/ammap_settings.xml")
 
     // SVCCC2: Clicking the "back" browser button returns us to the list of countries.
 
