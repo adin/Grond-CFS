@@ -39,7 +39,7 @@ import com.google.gwt.user.client.ui.TextBox;
 /**
  * Our main class.
  */
-public class Grond implements EntryPoint, ValueChangeHandler {
+public class Grond implements EntryPoint, ValueChangeHandler<String> {
   /** Region selector, updated via AmMap.
    * @see #rateFormInto
    * @see #amRegisterClick */
@@ -180,8 +180,8 @@ public class Grond implements EntryPoint, ValueChangeHandler {
     return panel;
   }
 
-  public void onValueChange(ValueChangeEvent event) {
-    if (event.getValue() instanceof String) onHistoryChange((String) event.getValue());
+  public void onValueChange(ValueChangeEvent<String> event) {
+    onHistoryChange(event.getValue());
   }
 
   protected void onHistoryChange(String token) {
@@ -369,12 +369,12 @@ public class Grond implements EntryPoint, ValueChangeHandler {
   public static void amRegisterClick(final String map_id, final String object_id, final String title,
       final String value) {
     Logger.getLogger("amRegisterClick").info("Got a click from AmMap; title: " + title);
-    if (title == null) return; // Ignore clicks on empty space.
+    if (title == null || title.equals("null")) return; // Ignore clicks on empty space.
     if (REGION == null) {
       final String[] parts = parseMapOfToken(History.getToken());
       final String countryId = parts[0];
       final String condition = parts[1];
-      History.newItem("ratingsIn_" + countryId + '_' + title.replaceAll("\\W\\_\\s", "") + '_' + condition);
+      History.newItem("ratingsIn_" + countryId + '_' + title.replaceAll("[\\W\\_\\s]+", "") + '_' + condition);
     } else {
       for (int i = 0; i < REGION.getItemCount(); ++i) {
         final String text = REGION.getItemText(i);
