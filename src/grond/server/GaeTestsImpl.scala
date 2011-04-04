@@ -62,11 +62,11 @@ class GaeTestsImpl extends HttpServlet {
       writer.write (");")
     }
 
-    if (request.getParameter ("gaeSpinUp") == "true") {grond.htmlunit.fun.gaeSpinUp; respond ("okay"); return}
+    val hostUrl = getHostUrl (request)
+    if (request.getParameter ("gaeSpinUp") == "true") {grond.htmlunit.fun.gaeSpinUp (hostUrl); respond ("okay"); return}
     if (request.getParameter ("internalTests") == "true") {respond (internalTests); return}
 
     try {
-      val hostUrl = getHostUrl (request)
       val firefox = grond.htmlunit.fun.FIREFOX3
       firefox.synchronized { // On development server under Jetty this can run in parallel and face conflicts.
         // We need this for GWT RPC to work (see also http://htmlunit.sourceforge.net/faq.html#AJAXDoesNotWork).

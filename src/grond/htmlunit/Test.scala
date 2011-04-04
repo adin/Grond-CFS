@@ -21,10 +21,10 @@ object fun {
   }
 
   /** Force AppEngine to spawn extra application instances. */
-  def gaeSpinUp: Unit = {
+  def gaeSpinUp (hostUrl: String): Unit = {
     // We have to really spin up some instances first for the HTMLUnit runs to have a chance!
     val urlFetch = com.google.appengine.api.urlfetch.URLFetchServiceFactory.getURLFetchService
-    val prefetch = new java.net.URL ("http://javagrond.appspot.com/grond/gae?spinUp")
+    val prefetch = new java.net.URL (hostUrl + "grond/gae?spinUp")
     for (i <- 0 until 5) {urlFetch.fetchAsync (prefetch)}
   }
 
@@ -41,7 +41,7 @@ abstract class Test (val webClient: WebClient, val hostUrl: String) {
   /** HtmlUnit fails on login and logout redirects. This function will finish the job. */
   def redirectingClick (clickOn: HtmlElement, fallbackToURL: String = null): HtmlPage = {
     webClient.getCache.clear // Make sure we actually invoke the server.
-    import com.gargoylesoftware.htmlunit.{FailingHttpStatusCodeException => NotFount}
+    //import com.gargoylesoftware.htmlunit.{FailingHttpStatusCodeException => NotFount}
     try {
       clickOn.click()
     } catch {case knownProblem: Throwable if knownProblem.getMessage contains "/_ah/grond/grond.nocache.js" =>
@@ -55,7 +55,7 @@ abstract class Test (val webClient: WebClient, val hostUrl: String) {
     var page: HtmlPage = if (havePage.isDefined) havePage.get else getPage()
     if (getDiv (page, "//div[starts-with(text(),'Hi, you are signed in as ')]") ne null) {
       page = redirectingClick (getAnchor (page, "//a[starts-with(text(),'Sign out')]"))
-      assert (getDiv (page, "//div[text()='You are not currently signed in!']") ne null)
+      assert (getDiv (page, "//div[text()='You are not currently signed in!']") ne null, page.asText)
     }
     page
   }
@@ -65,33 +65,16 @@ abstract class Test (val webClient: WebClient, val hostUrl: String) {
    * and for Google Accounts mode it will use the mock user object. */
   def signIn2 (_page: HtmlPage, testEmail: String, continueToHistory: String): HtmlPage = {
     // - Login under a given test user -
-    // If the Development Mode login form is present, we just enter the desired user email there,
-    // otherwise we use a "mock user object" scheme to workaround the login.
     var page = _page
-    val loginPage = page.asXml
-    // Development Mode login: http://paste.pocoo.org/show/291596/
-    if ((loginPage contains "isAdmin") && (loginPage contains "Sign in as Administrator")) {
-      // We seem to be in the Development Mode login page.
-      val continueInput = getInput (page, "//input[@name='continue']")
-      val continue = continueInput.getValueAttribute
-      assert (continue == hostUrl + continueToHistory, continue)
-      val emailInput = getInput (page, "//input[@name='email']")
-      assert (emailInput ne null, loginPage)
-      emailInput.setValueAttribute (testEmail)
-      val logIn = getInput (page, "//input[@type='submit' and @name='action' and @value='Log In']")
-      page = redirectingClick (logIn, continue)
-      assert (getDiv (page, "//div[text()='Hi, you are signed in as " + testEmail + "!']") ne null)
-    // Google Login: http://paste.pocoo.org/show/nFtu9k9ptLMH123MKHwJ/
-    } else if (loginPage contains "is asking for some information from your") {
-      assert (hostUrl startsWith "http://javagrond.appspot.com/", hostUrl) // Google login only happens there.
-      // Request Mock Object for the given user.
-      webClient.addRequestHeader("MockUserEmail", testEmail)
-      page = webClient.getPage (hostUrl + continueToHistory)
-      assert (page.asText contains "Hi, you are signed in as " + testEmail + "!", page.asText)
-    } else {
-      println (page.asXml)
-      throw new Exception ("Not a login page? Login redirection failed?")
-    }
+
+    // Note: When using the normal Google login we had trouble *logging out* with HtmlUnit 2.8,
+    // therefore we always use the "mock user object" scheme, never trying to actually login.
+
+    // Request Mock Object for the given user.
+    webClient.addRequestHeader ("MockUserEmail", testEmail)
+    page = webClient.getPage (hostUrl + continueToHistory)
+    assert (page.asText contains "Hi, you are signed in as " + testEmail + "!", page.asText)
+
     page
   }
 

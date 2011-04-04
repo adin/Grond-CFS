@@ -12,10 +12,11 @@ class GaeImpl extends HttpServlet {
     val user = UserServiceFactory.getUserService.getCurrentUser()
     if (user ne null) return user
 
-    val ua = request.getHeader ("User-Agent") // Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.19) Gecko/2010031422 Firefox/3.0.19 AppEngine-Google; (+http://code.google.com/appengine; appid: javagrond),gzip(gfe)
-    if ((ua contains "AppEngine-Google") && (ua contains "appengine; appid: javagrond")) {
-      val mockUserEmail = request.getHeader ("MockUserEmail")
-      if ((mockUserEmail ne null) && (mockUserEmail endsWith "@test.test")) {
+    val mockUserEmail = request.getHeader ("MockUserEmail")
+    if ((mockUserEmail ne null) && (mockUserEmail endsWith "@test.test")) {
+      val ua = request.getHeader ("User-Agent") // Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.19) Gecko/2010031422 Firefox/3.0.19 AppEngine-Google; (+http://code.google.com/appengine; appid: javagrond),gzip(gfe)
+      val isLocal = request.getRemoteAddr == "127.0.0.1"
+      if (isLocal || ((ua contains "AppEngine-Google") && (ua contains "appengine; appid: javagrond"))) {
         if (mockUserEmail.exists {case ch => ch != '@' && ch != '.' && !ch.isLetterOrDigit})
           throw new Exception ("Bad email: " + mockUserEmail)
         new User(mockUserEmail, "mock", mockUserEmail)
