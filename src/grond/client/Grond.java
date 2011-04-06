@@ -51,6 +51,8 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
   /** The DOM element where the {@link #countries} panel is located. */
   protected Element countryBox = null;
   protected final Grond grondSelf = this;
+  /** Cached information about the currently logged in user. */
+  protected GwtUser currentUser = null;
 
   /** {@link AsyncCallback} with standard error handler. */
   public abstract class Callback<T> implements AsyncCallback<T> {
@@ -88,6 +90,8 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
   /** Creates a status line which shows that the GROND server is available
    * and whether the current visitor is signed in. */
   protected void statusLine(GwtUser user) {
+    this.currentUser = user;
+
     // Add status line after country box.
     // RootPanel should be at the root of any GWT hierarchy in order for the GWT events to work.
     Element div = DOM.createDiv();
@@ -339,7 +343,6 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
                 } else {
                   final String ratingId = result.get("ratingId").isString().stringValue();
                   assert ratingId.length() > 10 : "ratingId is too short";
-                  Logger.getLogger("nameAndLocation").info("Got rating id: " + ratingId); // delme
                   root.clear();
                   final boolean doctorCreated = result.get("doctorCreated").isBoolean().booleanValue();
                   if (doctorCreated) {
@@ -465,6 +468,7 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
         if (loginIsVisible) return;
         getGae().getCurrentUser(new Callback<GwtUser>() {
           public void onSuccess(GwtUser user) {
+            currentUser = user;
             if (user == null) {
               int widgetIndex = countries.getWidgetIndex(addDoc);
               countries.remove(widgetIndex);

@@ -116,7 +116,8 @@ object doctorNameAndLocation { import doctorNameAndLocationUtility._, util._
 
   def findRatings (user: User): ju.List[Entity] = {
     val query = new Query ("DoctorRating")
-    query.addFilter ("user", Query.FilterOperator.EQUAL, user)
+    val userId = if (user.getFederatedIdentity ne null) user.getFederatedIdentity else user.getUserId
+    query.addFilter ("user", Query.FilterOperator.EQUAL, userId)
     queryToList (query)
   }
 
@@ -165,6 +166,10 @@ object doctorNameAndLocationUtility {
   }
   /** Create new rating, but only once (one doctor rating per user). New rating's aren't persisted. */
   def newOrExistingRating (doctor: Entity, user: User): Entity = {
+    // Should store userId instead of User (which just stores email):
+    // http://groups.google.com/group/google-appengine-java/browse_thread/thread/9fe6e35c84fda0e2/53e7294aa57e9a31
+    val userId = if (user.getFederatedIdentity ne null) user.getFederatedIdentity else user.getUserId
+
     def newRating = {
       val rating = new Entity ("DoctorRating", doctor.getKey)
       rating.setProperty ("country", doctor ("country"))
@@ -172,11 +177,12 @@ object doctorNameAndLocationUtility {
       rating.setProperty ("city", doctor ("city"))
       rating.setProperty ("firstName", doctor ("firstName"))
       rating.setProperty ("lastName", doctor ("lastName"))
-      rating.setProperty ("user", user)
+      rating.setProperty ("user", userId)
+      if (user.getEmail ne null) rating.setProperty("userEmail", user.getEmail)
       rating
     }
     val query = new Query ("DoctorRating", doctor.getKey)
-    query.addFilter ("user", Query.FilterOperator.EQUAL, user)
+    query.addFilter ("user", Query.FilterOperator.EQUAL, userId)
     val rating = Datastore.SERVICE.prepare (query) .asSingleEntity
     if (rating ne null) rating else newRating
   }

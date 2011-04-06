@@ -33,4 +33,10 @@ public class GwtUser {
     if (string == null) return "";
     return string.stringValue();
   }
+
+  /** Federated or Google user id. */
+  public String getId() {
+    if (federatedIdentity != null && federatedIdentity.length() != 0) return federatedIdentity;
+    return userId;
+  }
 }
