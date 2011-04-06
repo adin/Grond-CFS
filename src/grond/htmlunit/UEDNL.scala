@@ -120,7 +120,8 @@ class UEDNL (webClient: WebClient, hostUrl: String) extends Test (webClient, hos
     assert (page.getFirstByXPath ("//input[@id='dnl-name']") == null)
     assert (getDiv (page, "//div[contains(text()," +
       " 'Thanks for telling us about this practitioner!')]") ne null, page.asText)
-    assert (getDiv (page, "//div[contains(text(), 'TBD: The rating form will begin there.')]") ne null)
+    assert (getDiv (page, "//div[contains(text(), '" + name2 + "')]") ne null, page.asText) // We see whose rating we edit.
+    assert (getDiv (page, "//div[contains(text(), 'TYPE OF HEALTH PROFESSIONAL')]") ne null, page.asText)
 
     val query = new Query ("Doctor")
     query.addFilter ("country", EQUAL, "usa")
@@ -142,7 +143,8 @@ class UEDNL (webClient: WebClient, hostUrl: String) extends Test (webClient, hos
     next.click()
     assert (getDiv (page, "//div[contains(text(), 'This practicioner is withing our database." +
       " Please go on with your rating!')]") ne null, page.asText)
-    assert (getDiv (page, "//div[contains(text(), 'TBD: The rating form will begin there.')]") ne null)
+    assert (getDiv (page, "//div[contains(text(), '" + name2 + "')]") ne null) // We see whose rating we edit.
+    assert (getDiv (page, "//div[contains(text(), 'TYPE OF HEALTH PROFESSIONAL')]") ne null)
 
 /*
 

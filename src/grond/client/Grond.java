@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.logging.Logger;
 
 import com.google.gwt.core.client.EntryPoint;
+import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.Document;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.Style.Unit;
@@ -18,6 +19,7 @@ import com.google.gwt.event.dom.client.KeyUpEvent;
 import com.google.gwt.event.dom.client.KeyUpHandler;
 import com.google.gwt.event.logical.shared.ValueChangeEvent;
 import com.google.gwt.event.logical.shared.ValueChangeHandler;
+import com.google.gwt.json.client.JSONObject;
 import com.google.gwt.user.client.DOM;
 import com.google.gwt.user.client.History;
 import com.google.gwt.user.client.Window;
@@ -32,7 +34,6 @@ import com.google.gwt.user.client.ui.InlineHTML;
 import com.google.gwt.user.client.ui.InlineLabel;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.ListBox;
-import com.google.gwt.user.client.ui.PopupPanel;
 import com.google.gwt.user.client.ui.RootPanel;
 import com.google.gwt.user.client.ui.TextBox;
 
@@ -49,6 +50,7 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
   protected RootPanel countries = null;
   /** The DOM element where the {@link #countries} panel is located. */
   protected Element countryBox = null;
+  protected final Grond grondSelf = this;
 
   /** {@link AsyncCallback} with standard error handler. */
   public abstract class Callback<T> implements AsyncCallback<T> {
@@ -180,10 +182,12 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
     return panel;
   }
 
+  /** Pass History events to {@link #onHistoryChange}. */
   public void onValueChange(ValueChangeEvent<String> event) {
     onHistoryChange(event.getValue());
   }
 
+  /** Parse URL, select and render the corresponding page. */
   protected void onHistoryChange(String token) {
     // Make sure the "countryBox" container is present on the page.
     final Document document = Document.get();
@@ -219,6 +223,11 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
     } else if (token.startsWith("ratingsIn_")) { // Region page.
       initCountryBox();
       // ...
+    } else if (token.startsWith("rateFormIn_")) {
+      initCountryBox();
+      final String[] parts = token.split("_");
+      final RatingForm form = new RatingForm(grondSelf, parts[1], parts[2], parts[3], countries);
+      form.addToPanel();
     }
   }
 
@@ -294,21 +303,21 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
     surname.addChangeHandler(nextEnabler2);
 
     // TODO: Implement doctor suggestions.
-    final KeyUpHandler suggest = new KeyUpHandler() {
-      public void onKeyUp(final KeyUpEvent event) {
-        if (event.getSource() == city) {
-          final PopupPanel popup = new PopupPanel() {
-            {
-              setWidget(new Label("test"));
-            }
-          };
-          popup.show();
-        }
-      }
-    };
-    city.addKeyUpHandler(suggest);
-    name.addKeyUpHandler(suggest);
-    surname.addKeyUpHandler(suggest);
+//    final KeyUpHandler suggest = new KeyUpHandler() {
+//      public void onKeyUp(final KeyUpEvent event) {
+//        if (event.getSource() == city) {
+//          final PopupPanel popup = new PopupPanel() {
+//            {
+//              setWidget(new Label("test"));
+//            }
+//          };
+//          popup.show();
+//        }
+//      }
+//    };
+//    city.addKeyUpHandler(suggest);
+//    name.addKeyUpHandler(suggest);
+//    surname.addKeyUpHandler(suggest);
 
     final HTML errorMessage = new HTML("");
     errorMessage.getElement().setId("dnl-error");
@@ -321,26 +330,28 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
 
         // Send doctor information to the server.
         getGae().nameAndLocation(countryId, region, city.getValue(), name.getValue(), surname.getValue(),
-            condition, new Callback<GaeResponse>() {
-              public void onSuccess(GaeResponse result) {
-                if (result.errorMessage.length() != 0) {
-                  errorMessage.setHTML(result.toString());
-                  Window.alert(result.toString());
+            condition, new Callback<JSONObject>() {
+              public void onSuccess(JSONObject result) {
+                if (result.containsKey("errorMessage")) {
+                  final String message = result.get("errorMessage").isString().stringValue();
+                  errorMessage.setHTML(message);
+                  Window.alert(message);
                 } else {
-                  final String[] results = result.successMessage.split("\\;", 0);
-                  final String ratingId = results[0];
+                  final String ratingId = result.get("ratingId").isString().stringValue();
                   assert ratingId.length() > 10 : "ratingId is too short";
                   Logger.getLogger("nameAndLocation").info("Got rating id: " + ratingId); // delme
                   root.clear();
-                  final String doctorCreated = results[1];
-                  if (doctorCreated.equals("true")) {
+                  final boolean doctorCreated = result.get("doctorCreated").isBoolean().booleanValue();
+                  if (doctorCreated) {
                     root.add(new Label("Thanks for telling us about this practitioner!"));
                   } else {
                     root.add(new Label("This practicioner is withing our database."
                         + " Please go on with your rating!"));
                   }
-                  root.add(new Label("TBD: The rating form will begin there."));
-                  // TODO
+                  History.newItem("rateFormIn_" + countryId + '_' + condition + '_' + ratingId, false);
+                  final RatingForm form = new RatingForm(grondSelf, countryId, condition, ratingId, root);
+                  form.rating = result;
+                  form.addToPanel();
                 }
               }
             });
@@ -350,7 +361,8 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
   }
 
   /** Load AmMap into `ammap` element. */
-  native void ammap(String mapFolder) /*-{
+  native void ammap(String mapFolder)
+  /*-{
     // Callback the AmMap will invoke when a region is clicked.
     $wnd.amRegisterClick = $entry(@grond.client.Grond::amRegisterClick(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;));
     // http://www.ammap.com/docs/v.2/basics/adding_map_to_a_page
@@ -374,7 +386,8 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
       final String[] parts = parseMapOfToken(History.getToken());
       final String countryId = parts[0];
       final String condition = parts[1];
-      History.newItem("ratingsIn_" + countryId + '_' + title.replaceAll("[\\W\\_\\s]+", "") + '_' + condition);
+      final String safeTitle = title.replaceAll("[\\W\\_\\s]+", "");
+      History.newItem("ratingsIn_" + countryId + '_' + safeTitle + '_' + condition);
     } else {
       for (int i = 0; i < REGION.getItemCount(); ++i) {
         final String text = REGION.getItemText(i);
@@ -500,5 +513,10 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
   protected void removeChildren(Element element, int tail) {
     while (element.getChildCount() > tail)
       element.removeChild(element.getFirstChild());
+  }
+
+  /** Img src of images/ajax-loader-horisontal-1.gif */
+  static String ajaxLoaderHorisontal1() {
+    return GWT.getHostPageBaseURL() + "images/ajax-loader-horisontal-1.gif";
   }
 }

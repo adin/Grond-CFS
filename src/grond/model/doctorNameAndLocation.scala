@@ -109,8 +109,8 @@ object doctorNameAndLocation { import doctorNameAndLocationUtility._, util._
 
     // Save rating.
     Datastore.SERVICE.put (rating)
-    (Doctor (KeyFactory.keyToString (doctor.getKey)),
-     Rating (KeyFactory.keyToString (rating.getKey)),
+    (Doctor (KeyFactory.keyToString (doctor.getKey), Some (doctor)),
+     Rating (KeyFactory.keyToString (rating.getKey), Some (rating)),
      doctorCreated)
   }
 

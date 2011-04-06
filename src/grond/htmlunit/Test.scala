@@ -24,7 +24,7 @@ object fun {
   def gaeSpinUp (hostUrl: String): Unit = {
     // We have to really spin up some instances first for the HTMLUnit runs to have a chance!
     val urlFetch = com.google.appengine.api.urlfetch.URLFetchServiceFactory.getURLFetchService
-    val prefetch = new java.net.URL (hostUrl + "grond/gae?spinUp")
+    val prefetch = new java.net.URL (hostUrl + "grond/gae?op=nop")
     for (i <- 0 until 5) {urlFetch.fetchAsync (prefetch)}
   }
 

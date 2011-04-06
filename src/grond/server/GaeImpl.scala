@@ -1,7 +1,10 @@
 package grond.server
 import java.{util => ju}
 import javax.servlet.http._
+import scala.collection.JavaConversions._
 import com.google.appengine.api.users.{UserServiceFactory, User}
+import com.google.appengine.repackaged.org.json.JSONObject
+import grond.model.{Rating, Doctor}
 
 /**
  * Main server interface (JSON and String responses which used from GWT).
@@ -88,14 +91,45 @@ class GaeImpl extends HttpServlet {
         try {
           val (doctor, rating, doctorCreated) = doctorNameAndLocation.getRating (
             user, name, surname, countryId, region, city, problem)
-          reportErrorOrSuccess (Right (rating.id + ";" + doctorCreated))
+          val json = ratingToJson (rating, Some (doctor))
+          json.put ("doctorCreated", doctorCreated)
+          respond (json.toString)
         } catch {
-          case UserException (message, kind) => reportErrorOrSuccess (Left ("Error " + kind + ": " + message))
-          case ex => reportErrorOrSuccess (Left (ex.toString))
+          case UserException (message, kind) =>
+            val json = new JSONObject
+            json.put ("errorMessage", "Error " + kind + ": " + message)
+            respond (json.toString)
+          case ex =>
+            val json = new JSONObject
+            json.put ("errorMessage", ex.toString)
+            respond (json.toString)
         }
+      case "getRating" =>
+        val ratingId = request.getParameter ("ratingId")
+        assert ((ratingId ne null) && ratingId.length != 0)
+        respond (ratingToJson (Rating (ratingId), None) .toString)
+      case "nop" =>
       case op =>
         println ("Unknown op: " + op)
     }
+  }
+
+  protected def ratingToJson (rating: Rating, doctor: Option[Doctor]): JSONObject = {
+    val ratingId: String = rating.id
+    lazy val ratingKey = com.google.appengine.api.datastore.KeyFactory.stringToKey (ratingId)
+    val ratingEntity = if (rating.entity.isDefined) rating.entity.get else {
+      grond.model.Datastore.SERVICE.get (ratingKey)
+    }
+    val json = new JSONObject
+    for ((key, value) <- ratingEntity.getProperties) {json.put (key, value)}
+    val doctorEntity = if (doctor.isDefined && doctor.get.entity.isDefined) doctor.get.entity.get else {
+      grond.model.Datastore.SERVICE.get (ratingKey.getParent)
+    }
+    val djson = new JSONObject
+    for ((key, value) <- doctorEntity.getProperties) {djson.put (key, value)}
+    json.put ("doctor", djson)
+    json.put ("ratingId", ratingId)
+    json
   }
 
   override def doGet (request: HttpServletRequest, response: HttpServletResponse): Unit = welcome (request, response)

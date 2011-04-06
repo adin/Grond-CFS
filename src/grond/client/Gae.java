@@ -96,14 +96,37 @@ public class Gae {
         "federatedIdentity", federatedIdentity);
   }
 
-  /** Creating a new doctor and rating. Returns ratingId. */
+  protected void stringToObject(final String jsonString, final AsyncCallback<JSONObject> callback) {
+    final JSONValue json = JSONParser.parseStrict(jsonString);
+    final JSONString asString = json.isString();
+    final JSONObject asObject = json.isObject();
+    if (asString != null) callback.onFailure(new RuntimeException(asString.stringValue()));
+    else if (asObject == null) callback.onFailure(new RuntimeException(
+        "Returned JSON value is not an object."));
+    else callback.onSuccess(asObject);
+  }
+
+  /** Creating a new doctor and rating.<br>
+   * Returns rating values.
+   * Also rating id in a 'ratingId' string and doctor values in a 'doctor' object.
+   * Also 'doctorCreated' boolean is true if the doctor was created (false if existing doctor found).<br>
+   * Returns an 'errorMessage' string if there was an error. */
   public void nameAndLocation(final String countryId, final String region, final String city,
-      final String name, final String surname, final String problem, final AsyncCallback<GaeResponse> callback) {
-    gaeEither(new ForwardingCallback<GaeResponse, GaeResponse>(callback) {
-      public void onSuccess(GaeResponse rep) {
-        callback.onSuccess(rep);
+      final String name, final String surname, final String problem, final AsyncCallback<JSONObject> callback) {
+    gaeString(new ForwardingCallback<String, JSONObject>(callback) {
+      public void onSuccess(String ratingOp) {
+        stringToObject(ratingOp, callback);
       }
     }, "countryId", countryId, "region", region, "city", city, "name", name, "surname", surname, "problem",
         problem, "op", "nameAndLocation");
+  }
+
+  /** Rating values. Also rating id in a 'ratingId' string and doctor values in a 'doctor' object. */
+  public void getRating(final String ratingId, final AsyncCallback<JSONObject> callback) {
+    gaeString(new ForwardingCallback<String, JSONObject>(callback) {
+      public void onSuccess(String rating) {
+        stringToObject(rating, callback);
+      }
+    }, "ratingId", ratingId, "op", "getRating");
   }
 }
