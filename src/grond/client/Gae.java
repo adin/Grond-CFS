@@ -1,5 +1,7 @@
 package grond.client;
 
+import java.util.logging.Logger;
+
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.http.client.URL;
 import com.google.gwt.json.client.JSONArray;
@@ -75,6 +77,20 @@ public class Gae {
     }, parameters);
   }
 
+  protected void gaeUpdate(final String... parameters) {
+    gaeString(new AsyncCallback<String>() {
+      @Override
+      public void onFailure(Throwable caught) {
+        Logger.getLogger("gaeUpdate").severe(caught.toString());
+      }
+
+      @Override
+      public void onSuccess(String result) {
+        if (result.length() != 0) Logger.getLogger("gaeUpdate").severe(result);
+      }
+    }, parameters);
+  }
+
   /** See if the user is logged in with the server. */
   public void getCurrentUser(final AsyncCallback<GwtUser> callback) {
     gaeString(new ForwardingCallback<String, GwtUser>(callback) {
@@ -128,5 +144,20 @@ public class Gae {
         stringToObject(rating, callback);
       }
     }, "ratingId", ratingId, "op", "getRating");
+  }
+
+  /** Update a list value (for example, a group of checkboxes) in the rating. */
+  public void ratingUpdateList(final String ratingId, final String field, final String value,
+      final boolean addOrRemove) {
+    gaeUpdate("ratingId", ratingId, "field", field, "value", value, "vop", addOrRemove ? "add" : "remove",
+        "op", "ratingUpdateList");
+  }
+
+  public void ratingUpdateString(final String ratingId, final String field, final String value) {
+    gaeUpdate("ratingId", ratingId, "field", field, "value", value, "op", "ratingUpdateString");
+  }
+
+  public void ratingRemove(final String ratingId, final String field) {
+    gaeUpdate("ratingId", ratingId, "field", field, "op", "ratingRemove");
   }
 }
