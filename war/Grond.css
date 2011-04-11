@@ -1,4 +1,10 @@
-/** Example styling. */
+/* Example styling. */
+
+div#statusLinePlacement {
+  border: 1px solid;
+}
+
+/* Rating form styles. */
 
 .GrondRatingH2 {
   font-size: 1.5em;
@@ -7,4 +13,27 @@
 .GrondRatingH3 {
   font-size: 1.5em;
   color: red;
+}
+
+.GrondRatingTextarea {
+  width: 80%;
+}
+
+/* Rating form, step 4, the "symptom level" table.
+   Note: padding should be 0 and borders collapsed in order for the GrondRadioRow's border-bottom to be displayed properly. */
+
+table.GrondFourthStepTable {
+  border: 0;
+  padding: 0;
+  border-collapse: collapse;
+}
+
+table.GrondFourthStepTable td {
+  padding: 0;
+}
+
+td.GrondRadioRow {
+  text-align: center;
+  background-color: rgb(255, 255, 204);
+  border-bottom: 1px solid;
 }

@@ -1,6 +1,7 @@
 package grond.client;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.logging.Logger;
 
 import com.google.gwt.dom.client.Document;
@@ -15,11 +16,15 @@ import com.google.gwt.json.client.JSONValue;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.CheckBox;
+import com.google.gwt.user.client.ui.FlexTable;
 import com.google.gwt.user.client.ui.FlowPanel;
 import com.google.gwt.user.client.ui.HTML;
+import com.google.gwt.user.client.ui.HTMLTable;
+import com.google.gwt.user.client.ui.HasHorizontalAlignment;
 import com.google.gwt.user.client.ui.InlineHTML;
 import com.google.gwt.user.client.ui.Panel;
 import com.google.gwt.user.client.ui.RadioButton;
+import com.google.gwt.user.client.ui.TextArea;
 import com.google.gwt.user.client.ui.TextBox;
 import com.google.gwt.user.client.ui.Widget;
 
@@ -75,6 +80,7 @@ public class RatingForm {
         if (step == 1) firstStep();
         else if (step == 2) secondStep();
         else if (step == 3) thirdStep();
+        else if (step == 4) fourthStep();
         else throw new RuntimeException("Unknown step: " + step);
       }
     };
@@ -153,7 +159,7 @@ public class RatingForm {
     panel.add(textInput("typeAlternativeOther"));
     panel.add(new InlineHTML("<br/>"));
 
-    panel.add(stepButton("next ->", 2));
+    panel.add(wizardNavigation());
   }
 
   protected void secondStep() {
@@ -221,8 +227,7 @@ public class RatingForm {
         "<b>Harmful</b> - The 'Harmful' practitioner" + " does not believe ME/CFS exists"
             + " and appears to take its existence as a personal affront."));
 
-    panel.add(stepButton("<- back", 1));
-    panel.add(stepButton("next ->", 3));
+    panel.add(wizardNavigation());
   }
 
   protected void thirdStep() {
@@ -269,7 +274,148 @@ public class RatingForm {
     panel.add(h3(new InlineHTML("ACTIVITY LEVEL WHEN YOU LAST SAW THIS PRACTITIONER")));
     panel.add(radioInput("actLevEnd", null, activityLevels));
 
-    panel.add(stepButton("<- back", 2));
+    panel.add(wizardNavigation());
+  }
+
+  protected void fourthStep() {
+    final FlexTable table = new FlexTable();
+    final FlexTable.FlexCellFormatter formatter = table.getFlexCellFormatter();
+    table.addStyleName("GrondFourthStepTable");
+
+    table.setHTML(0, 1, "Please rate your symptom level"
+        + " the first time you saw your practitioner and the last time you saw her/him");
+    formatter.setColSpan(0, 1, 22);
+    table.setHTML(1, 1, "AT FIRST APPOINTMENT");
+    formatter.setColSpan(1, 1, 10);
+    formatter.setHorizontalAlignment(1, 1, HasHorizontalAlignment.ALIGN_CENTER);
+    table.setHTML(1, 3, "AT LAST APPOINTMENT");
+    formatter.setColSpan(1, 3, 11);
+    formatter.setHorizontalAlignment(1, 3, HasHorizontalAlignment.ALIGN_CENTER);
+
+    table.setHTML(3, 1, "Worst");
+    formatter.setColSpan(3, 1, 5);
+    table.setHTML(3, 2, "Healthy");
+    formatter.setColSpan(3, 2, 5);
+    formatter.setHorizontalAlignment(3, 2, HasHorizontalAlignment.ALIGN_RIGHT);
+
+    formatter.setWidth(3, 3, "4px");
+
+    table.setHTML(3, 4, "Worst");
+    formatter.setColSpan(3, 4, 5);
+    table.setHTML(3, 5, "Healthy");
+    formatter.setColSpan(3, 5, 5);
+    formatter.setHorizontalAlignment(3, 5, HasHorizontalAlignment.ALIGN_RIGHT);
+
+    table.setHTML(2, 22, "N/A");
+    formatter.setHorizontalAlignment(2, 2, HasHorizontalAlignment.ALIGN_CENTER);
+
+    /*! Maps cell index to a button. */
+    final HashMap<String, RadioButton> buttons = new HashMap<String, RadioButton>();
+    final int cellWidth = 24; /*!< Radio button cells should have an equal width. */
+    final String cellWidthS = cellWidth + "px";
+    final ValueChangeHandler<Boolean> buttonChangeHandler = new ValueChangeHandler<Boolean>() {
+      @Override
+      public void onValueChange(ValueChangeEvent<Boolean> event) {
+        final RadioButton button = (RadioButton) event.getSource();
+        ratingUpdateString(button.getName(), button.getFormValue());
+      }
+    };
+    for (int i = 1; i <= 10; ++i) {
+      table.setHTML(2, i, Integer.toString(i));
+      table.setHTML(2, 11 + i, Integer.toString(i));
+      formatter.setHorizontalAlignment(2, i, HasHorizontalAlignment.ALIGN_CENTER);
+      formatter.setHorizontalAlignment(2, 11 + i, HasHorizontalAlignment.ALIGN_CENTER);
+      formatter.setWidth(2, i, cellWidthS);
+      formatter.setWidth(2, 11 + i, cellWidthS);
+      int row = 4;
+      for (final String field : Arrays.asList("energy", "sleep", "think", "pain", "mood", "ql", "sat")) {
+        if (i == 1) {
+          table.setHTML(row, 0, field.equals("think") ? "Thinking Ability"
+              : field.equals("ql") ? "Quality of Life" : field.equals("sat") ? "Overall Satisfaction" : field
+                  .substring(0, 1).toUpperCase() + field.substring(1));
+
+          formatter.setWidth(2, 22, cellWidthS);
+
+          final RadioButton naButton = new RadioButton(field + "After");
+          naButton.setFormValue("-1");
+          naButton.setValue(new JSONString(naButton.getFormValue()).equals(rating.get(naButton.getName())));
+          table.setWidget(row, 22, naButton);
+          naButton.addValueChangeHandler(buttonChangeHandler);
+          buttons.put(row + ",22", naButton);
+          formatter.addStyleName(row, 22, "GrondRadioRow");
+        }
+        if (!field.equals("sat")) {
+          final RadioButton button = new RadioButton(field + "Before");
+          button.setFormValue(Integer.toString(i));
+          button.setValue(new JSONString(button.getFormValue()).equals(rating.get(button.getName())));
+          table.setWidget(row, i, button);
+          button.addValueChangeHandler(buttonChangeHandler);
+          buttons.put(row + "," + i, button);
+          formatter.addStyleName(row, i, "GrondRadioRow");
+        }
+        final RadioButton button = new RadioButton(field + "After");
+        button.setFormValue(Integer.toString(i));
+        button.setValue(new JSONString(button.getFormValue()).equals(rating.get(button.getName())));
+        table.setWidget(row, 11 + i, button);
+        button.addValueChangeHandler(buttonChangeHandler);
+        buttons.put(row + "," + (11 + i), button);
+        formatter.addStyleName(row, 11 + i, "GrondRadioRow");
+
+        ++row;
+      }
+    }
+    // Handle cell clicks as radio button clicks.
+    table.addClickHandler(new ClickHandler() {
+      @Override
+      public void onClick(final ClickEvent event) {
+        final HTMLTable.Cell cell = table.getCellForEvent(event);
+        if (cell != null) {
+          final RadioButton button = buttons.get(cell.getRowIndex() + "," + cell.getCellIndex());
+          if (button != null && !button.getValue()) button.setValue(true);
+        }
+      }
+    });
+    panel.add(table);
+
+    panel.add(h2(new HTML("Comments")));
+    final TextArea comments = new TextArea();
+    comments.setValue(rating.containsKey("patientComments") ? rating.get("patientComments").isString()
+        .stringValue() : "");
+    comments.addValueChangeHandler(new ValueChangeHandler<String>() {
+      @Override
+      public void onValueChange(ValueChangeEvent<String> event) {
+        ratingUpdateString("patientComments", event.getValue());
+      }
+    });
+    comments.addStyleName("GrondRatingTextarea");
+    panel.add(comments);
+
+    panel.add(h2(new HTML("Name:")));
+    panel.add(textInput("patientName"));
+    panel.add(new HTML("You are not required to leave your name but we encourage you to do so."
+        + " If you do it will appear on your review." + " Reviews from patients who leave their names"
+        + " will receive a higher rating than anonymous reviews."));
+
+    panel.add(h2(new HTML("E-mail Address:")));
+    final TextBox patientEmail = textInput("patientEmail");
+    if (patientEmail.getValue().length() == 0 && grond.currentUser != null && grond.currentUser.email != null
+        && grond.currentUser.email.length() != 0) patientEmail.setValue(grond.currentUser.email, true);
+    panel.add(patientEmail);
+    panel.add(new HTML("If you wish to edit this review in the future"
+        + " or to do further reviews please provide your e-mail address;"
+        + " it will not be visible on the internet."));
+
+    panel.add(new HTML("&nbsp;"));
+    panel.add(new HTML("Thanks for taking the time to fill out the form!"));
+
+    panel.add(wizardNavigation());
+  }
+
+  protected Panel wizardNavigation() {
+    final FlowPanel panel = new FlowPanel();
+    if (step > 1) panel.add(stepButton("<- back", step - 1));
+    if (step < 4) panel.add(stepButton("next ->", step + 1));
+    return panel;
   }
 
   protected Panel radioInput(final String field, final String defaultValue, final String... valuesAndLabels) {
@@ -333,7 +479,7 @@ public class RatingForm {
     textBox.addValueChangeHandler(new ValueChangeHandler<String>() {
       @Override
       public void onValueChange(ValueChangeEvent<String> event) {
-        ratingUpdateString("typeSpecialistOther", event.getValue());
+        ratingUpdateString(field, event.getValue());
       }
     });
     return textBox;
