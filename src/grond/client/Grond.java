@@ -20,7 +20,6 @@ import com.google.gwt.event.dom.client.KeyUpHandler;
 import com.google.gwt.event.logical.shared.ValueChangeEvent;
 import com.google.gwt.event.logical.shared.ValueChangeHandler;
 import com.google.gwt.json.client.JSONObject;
-import com.google.gwt.user.client.DOM;
 import com.google.gwt.user.client.History;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.rpc.AsyncCallback;
@@ -92,12 +91,7 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
   protected void statusLine(GwtUser user) {
     this.currentUser = user;
 
-    // Add status line after country box.
-    // RootPanel should be at the root of any GWT hierarchy in order for the GWT events to work.
-    Element div = DOM.createDiv();
-    div.setId("g.header.div");
-    countryBox.getParentElement().insertAfter(div, countryBox);
-    RootPanel rootPanel = RootPanel.get("g.header.div");
+    final RootPanel rootPanel = RootPanel.get("statusLinePlacement");
 
     final HTMLPanel panel = new HTMLPanel(
         "<span id='g.version'></span><span id='g.login'></span><span id='g.tests'></span>");
