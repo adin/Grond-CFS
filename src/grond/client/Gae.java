@@ -1,5 +1,7 @@
 package grond.client;
 
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.logging.Logger;
 
 import com.google.gwt.core.client.GWT;
@@ -10,6 +12,7 @@ import com.google.gwt.json.client.JSONParser;
 import com.google.gwt.json.client.JSONString;
 import com.google.gwt.json.client.JSONValue;
 import com.google.gwt.jsonp.client.JsonpRequestBuilder;
+import com.google.gwt.jsonp.client.TimeoutException;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 
 /** Success or error. */
@@ -24,6 +27,15 @@ class GaeResponse {
 
 /** ScriptTag RPC to the cluster. */
 public class Gae {
+  protected final Grond grond;
+  /** Maps request id to JSONP URL. Used to automatically repeat failed requests. */
+  protected final HashMap<String, String[]> gaeRequests;
+
+  public Gae(final Grond grond, final HashMap<String, String[]> gaeRequests) {
+    this.grond = grond;
+    this.gaeRequests = gaeRequests;
+  }
+
   /** {@link AsyncCallback} with standard error handler. */
   public abstract class ForwardingCallback<T, T2> implements AsyncCallback<T> {
     final AsyncCallback<T2> recipient;
@@ -40,6 +52,7 @@ public class Gae {
   /** Invokes a servlet returning a string. */
   protected void gaeString(final AsyncCallback<String> callback, final String... parameters) {
     final JsonpRequestBuilder jsonp = new JsonpRequestBuilder();
+    // http://code.google.com/intl/en/appengine/docs/java/runtime.html#The_Request_Timer
     jsonp.setTimeout(40000); // Default TCP/IP timeout + 10 seconds.
 
     String url = GWT.getModuleBaseURL() + "gae";
@@ -77,16 +90,39 @@ public class Gae {
     }, parameters);
   }
 
-  protected void gaeUpdate(final String... parameters) {
+  /** @param rpcTargetId identifies what this request is changing (null if nothing). */
+  protected void gaeUpdate(final String rpcTargetId, final String... parameters) {
+    // Put the request into a queue in order not to try repeating requests which were superceeded by later requests.
+    final String updateStamp = Arrays.asList(parameters).toString();
+    if (rpcTargetId != null) gaeRequests.put(rpcTargetId, parameters);
+
     gaeString(new AsyncCallback<String>() {
+      final AsyncCallback<String> callback = this;
+
       @Override
       public void onFailure(Throwable caught) {
         Logger.getLogger("gaeUpdate").severe(caught.toString());
+        if (caught instanceof TimeoutException) {
+          // See if this is a latest request for this target, and if it is, repeat it.
+          if (rpcTargetId != null) {
+            final String[] queuedParameters = gaeRequests.get(rpcTargetId);
+            if (queuedParameters != null && Arrays.asList(queuedParameters).toString().equals(updateStamp)) {
+              Logger.getLogger("gaeUpdate").info("Repeating request changing " + rpcTargetId + ".");
+              gaeString(callback, parameters);
+            }
+          }
+        }
       }
 
       @Override
       public void onSuccess(String result) {
         if (result.length() != 0) Logger.getLogger("gaeUpdate").severe(result);
+        // Request successfull, remove it from the queue.
+        if (rpcTargetId != null) {
+          final String[] queuedParameters = gaeRequests.get(rpcTargetId);
+          if (queuedParameters != null && Arrays.asList(queuedParameters).toString().equals(updateStamp)) gaeRequests
+              .remove(rpcTargetId);
+        }
       }
     }, parameters);
   }
@@ -149,15 +185,16 @@ public class Gae {
   /** Update a list value (for example, a group of checkboxes) in the rating. */
   public void ratingUpdateList(final String ratingId, final String field, final String value,
       final boolean addOrRemove) {
-    gaeUpdate("ratingId", ratingId, "field", field, "value", value, "vop", addOrRemove ? "add" : "remove",
-        "op", "ratingUpdateList");
+    gaeUpdate(ratingId + field, "ratingId", ratingId, "field", field, "value", value, "vop",
+        addOrRemove ? "add" : "remove", "op", "ratingUpdateList");
   }
 
   public void ratingUpdateString(final String ratingId, final String field, final String value) {
-    gaeUpdate("ratingId", ratingId, "field", field, "value", value, "op", "ratingUpdateString");
+    gaeUpdate(ratingId + field, "ratingId", ratingId, "field", field, "value", value, "op",
+        "ratingUpdateString");
   }
 
   public void ratingRemove(final String ratingId, final String field) {
-    gaeUpdate("ratingId", ratingId, "field", field, "op", "ratingRemove");
+    gaeUpdate(ratingId + field, "ratingId", ratingId, "field", field, "op", "ratingRemove");
   }
 }

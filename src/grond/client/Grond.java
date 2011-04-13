@@ -4,6 +4,7 @@ import grond.shared.Countries;
 import grond.shared.Countries.Country;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.logging.Logger;
 
 import com.google.gwt.core.client.EntryPoint;
@@ -21,20 +22,24 @@ import com.google.gwt.event.logical.shared.ValueChangeEvent;
 import com.google.gwt.event.logical.shared.ValueChangeHandler;
 import com.google.gwt.json.client.JSONObject;
 import com.google.gwt.user.client.History;
+import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.Anchor;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.FlexTable;
+import com.google.gwt.user.client.ui.FlowPanel;
 import com.google.gwt.user.client.ui.HTML;
 import com.google.gwt.user.client.ui.HTMLPanel;
 import com.google.gwt.user.client.ui.HTMLTable;
+import com.google.gwt.user.client.ui.Image;
 import com.google.gwt.user.client.ui.InlineHTML;
 import com.google.gwt.user.client.ui.InlineLabel;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.ListBox;
 import com.google.gwt.user.client.ui.RootPanel;
 import com.google.gwt.user.client.ui.TextBox;
+import com.google.gwt.user.client.ui.Widget;
 
 /**
  * Our main class.
@@ -52,6 +57,8 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
   protected final Grond grondSelf = this;
   /** Cached information about the currently logged in user. */
   protected GwtUser currentUser = null;
+  /** Maps request id to JSONP URL. Used to automatically repeat failed requests. */
+  protected HashMap<String, String[]> gaeRequests = null;
 
   /** {@link AsyncCallback} with standard error handler. */
   public abstract class Callback<T> implements AsyncCallback<T> {
@@ -83,7 +90,8 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
   }
 
   protected Gae getGae() {
-    return new Gae();
+    if (gaeRequests == null) gaeRequests = new HashMap<String, String[]>();
+    return new Gae(this, gaeRequests);
   }
 
   /** Creates a status line which shows that the GROND server is available
@@ -93,10 +101,9 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
 
     final RootPanel rootPanel = RootPanel.get("statusLinePlacement");
 
-    final HTMLPanel panel = new HTMLPanel(
-        "<span id='g.version'></span><span id='g.login'></span><span id='g.tests'></span>");
+    final HTMLPanel panel = new HTMLPanel("<span id='g.version'></span>" + "<span id='g.login'></span>"
+        + "<span id='g.tests'></span>");
     rootPanel.add(panel);
-    panel.add(new Label("GROND version 0.1"), "g.version");
     if (user == null) {
       panel.add(new Label("You are not currently signed in!"), "g.login");
       final Anchor signIn = new Anchor("Sign in");
@@ -129,6 +136,32 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
         }
       });
       if (user.isAdmin) panel.add(test, "g.tests");
+
+      final FlowPanel updatesPanel = new FlowPanel();
+      final Widget updatesFiller = new Label("GROND version 0.1");
+      final Image waiting = new Image(Grond.ajaxLoaderHorisontal1());
+      panel.add(updatesPanel, "g.version");
+      new Timer() {
+        // Wait a bit before displaying the notification.
+        double pendingSeconds = 0.0;
+
+        @Override
+        public void run() {
+          if (gaeRequests == null || gaeRequests.isEmpty()) {
+            pendingSeconds = 0.0;
+            if (updatesPanel.getWidgetCount() != 1 || updatesPanel.getWidget(0) != updatesFiller) {
+              updatesPanel.clear();
+              updatesPanel.add(updatesFiller);
+            }
+            return;
+          }
+          pendingSeconds += 0.1;
+          if (pendingSeconds < 2.0) return;
+          updatesPanel.clear();
+          updatesPanel.add(waiting);
+          updatesPanel.add(new InlineHTML(" Update requests pending: " + gaeRequests.size()));
+        }
+      }.scheduleRepeating(100);
     }
   }
 
