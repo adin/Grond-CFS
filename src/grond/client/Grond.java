@@ -79,7 +79,7 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
     onHistoryChange(History.getToken());
 
     getGae().getCurrentUser(new Callback<GwtUser>() {
-      public void onSuccess(GwtUser user) {
+      public void onSuccess(final GwtUser user) {
         statusLine(user);
       }
     });
@@ -96,7 +96,7 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
 
   /** Creates a status line which shows that the GROND server is available
    * and whether the current visitor is signed in. */
-  protected void statusLine(GwtUser user) {
+  protected void statusLine(final GwtUser user) {
     this.currentUser = user;
 
     final RootPanel rootPanel = RootPanel.get("statusLinePlacement");

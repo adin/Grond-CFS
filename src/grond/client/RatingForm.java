@@ -13,7 +13,10 @@ import com.google.gwt.json.client.JSONArray;
 import com.google.gwt.json.client.JSONObject;
 import com.google.gwt.json.client.JSONString;
 import com.google.gwt.json.client.JSONValue;
+import com.google.gwt.user.client.Command;
+import com.google.gwt.user.client.CommandCanceledException;
 import com.google.gwt.user.client.Timer;
+import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.CheckBox;
 import com.google.gwt.user.client.ui.FlexTable;
@@ -119,6 +122,11 @@ public class RatingForm {
   }
 
   protected void firstStep() {
+    // Save condition into the rating.
+    if (!condition.equals("fm") && !condition.equals("cfs")) throw new RuntimeException("Unknown condition: "
+        + condition);
+    if (!rating.containsKey("problem")) ratingUpdateString("problem", condition);
+
     panel.add(new HTML("TYPE OF HEALTH PROFESSIONAL"));
     for (String title : Arrays.asList("Family Physician", "General Internal Medicine")) {
       panel.add(ratingBox("type", title, null));
@@ -159,7 +167,7 @@ public class RatingForm {
     panel.add(textInput("typeAlternativeOther"));
     panel.add(new InlineHTML("<br/>"));
 
-    panel.add(wizardNavigation());
+    panel.add(wizardNavigation(null));
   }
 
   protected void secondStep() {
@@ -227,7 +235,7 @@ public class RatingForm {
         "<b>Harmful</b> - The 'Harmful' practitioner" + " does not believe ME/CFS exists"
             + " and appears to take its existence as a personal affront."));
 
-    panel.add(wizardNavigation());
+    panel.add(wizardNavigation(null));
   }
 
   protected void thirdStep() {
@@ -274,7 +282,20 @@ public class RatingForm {
     panel.add(h3(new InlineHTML("ACTIVITY LEVEL WHEN YOU LAST SAW THIS PRACTITIONER")));
     panel.add(radioInput("actLevEnd", null, activityLevels));
 
-    panel.add(wizardNavigation());
+    final Command verifier = new Command() {
+      @Override
+      public void execute() {
+        if (!rating.containsKey("actLevStart") || !rating.containsKey("actLevEnd")) {
+          final HTML html = new HTML(
+              "<span style='color: red; font-size: larger'>Please rate the activity levels! Thanks.</span>");
+          panel.add(html);
+          Document.get().setScrollTop(
+              html.getAbsoluteTop() + html.getOffsetHeight() - Window.getClientHeight());
+          throw new CommandCanceledException(this);
+        }
+      }
+    };
+    panel.add(wizardNavigation(verifier));
   }
 
   protected void fourthStep() {
@@ -408,13 +429,13 @@ public class RatingForm {
     panel.add(new HTML("&nbsp;"));
     panel.add(new HTML("Thanks for taking the time to fill out the form!"));
 
-    panel.add(wizardNavigation());
+    panel.add(wizardNavigation(null));
   }
 
-  protected Panel wizardNavigation() {
+  protected Panel wizardNavigation(Command nextVerifier) {
     final FlowPanel panel = new FlowPanel();
-    if (step > 1) panel.add(stepButton("<- back", step - 1));
-    if (step < 4) panel.add(stepButton("next ->", step + 1));
+    if (step > 1) panel.add(stepButton("<- back", step - 1, null));
+    if (step < 4) panel.add(stepButton("next ->", step + 1, nextVerifier));
     return panel;
   }
 
@@ -451,11 +472,17 @@ public class RatingForm {
     return widget;
   }
 
-  protected Button stepButton(final String label, final int targetStep) {
+  protected Button stepButton(final String label, final int targetStep, final Command verifier) {
     final Button button = new Button(label);
     button.addClickHandler(new ClickHandler() {
       @Override
       public void onClick(ClickEvent event) {
+        if (verifier != null) try {
+          verifier.execute();
+        } catch (CommandCanceledException cancel) {
+          return; // Verifier blocked the button.
+        }
+
         panel.clear();
         step = targetStep;
         addToPanel();
