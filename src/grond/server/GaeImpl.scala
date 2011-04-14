@@ -5,7 +5,7 @@ import scala.collection.JavaConversions._
 import com.google.appengine.api.datastore.{Entity, KeyFactory}
 import com.google.appengine.api.users.{UserServiceFactory, User}
 import com.google.appengine.repackaged.org.json.JSONObject
-import grond.model.{Rating, Doctor, Datastore}
+import grond.model.{Rating, Doctor, Datastore, doctorUtil}
 
 /**
  * Main server interface (JSON and String responses which used from GWT).
@@ -116,6 +116,7 @@ class GaeImpl extends HttpServlet {
         val rating = Datastore.SERVICE.get (ratingKey)
         if (!ratingBelongsToUser (rating, user) && !isAdmin) throw new Exception ("Security check failed.")
         val field = request getParameter "field"
+        assert (ratingOuterField (field), field)
         val value = request getParameter "value"
         val vop = request getParameter "vop"
         var values = rating.getProperty (field) .asInstanceOf[ju.List[String]]
@@ -123,7 +124,9 @@ class GaeImpl extends HttpServlet {
         def update(): Unit = {
           if (Rating.isIndexed (field)) rating.setProperty (field, values)
           else rating.setUnindexedProperty (field, values)
+          val afterSave = ratingPostprocess (rating, field, values)
           Datastore.SERVICE.put (rating)
+          if (afterSave.isDefined) afterSave.get.apply
         }
         vop match {
           case "add" =>
@@ -146,12 +149,15 @@ class GaeImpl extends HttpServlet {
         val rating = Datastore.SERVICE.get (ratingKey)
         if (!ratingBelongsToUser (rating, user) && !isAdmin) throw new Exception ("Security check failed.")
         val field = request getParameter "field"
+        assert (ratingOuterField (field), field)
         val value = request getParameter "value"
         val have = rating.getProperty(field).asInstanceOf[String]
         if (value != have) {
           if (Rating.isIndexed (field)) rating.setProperty (field, value)
           else rating.setUnindexedProperty (field, value)
+          val afterSave = ratingPostprocess (rating, field, have)
           Datastore.SERVICE.put (rating)
+          if (afterSave.isDefined) afterSave.get.apply
         }
         respond ("")
       case "ratingRemove" =>
@@ -160,15 +166,33 @@ class GaeImpl extends HttpServlet {
         val rating = Datastore.SERVICE.get (ratingKey)
         if (!ratingBelongsToUser (rating, user) && !isAdmin) throw new Exception ("Security check failed.")
         val field = request getParameter "field"
+        assert (ratingOuterField (field), field)
         if (rating.hasProperty (field)) {
+          val have = rating.getProperty (field)
           rating.removeProperty (field)
+          val afterSave = ratingPostprocess (rating, field, have)
           Datastore.SERVICE.put (rating)
+          if (afterSave.isDefined) afterSave.get.apply
         }
         respond ("")
       case "nop" =>
       case op =>
         println ("Unknown op: " + op)
     }
+  }
+
+  /** Do any additional actions if necessary when a rating field is updated.<br>
+   * Note: Rating is saved by the caller after this method returns.<br>
+   * Returns a function which should be called after the rating is saved. */
+  protected def ratingPostprocess (rating: Entity, field: String, oldValue: AnyRef): Option[()=>Unit] = field match {
+    case "actLevStart" | "actLevEnd" =>
+      Some (() => doctorUtil.calculateMedianRating (rating.getKey.getParent))
+    case _ => None
+  }
+
+  /** Checks if the field is allowed to be updated directly with RPC requests. */
+  protected def ratingOuterField (field: String): Boolean = {
+    field != "fmRating" && field != "cfsRating"
   }
 
   protected def ratingBelongsToUser (rating: Entity, user: User): Boolean = {
