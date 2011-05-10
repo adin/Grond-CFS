@@ -1,18 +1,23 @@
 package grond.client;
 
+import grond.shared.Countries.Country;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.logging.Logger;
 
+import com.google.code.gwt.storage.client.Storage;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.http.client.URL;
 import com.google.gwt.json.client.JSONArray;
+import com.google.gwt.json.client.JSONNumber;
 import com.google.gwt.json.client.JSONObject;
 import com.google.gwt.json.client.JSONParser;
 import com.google.gwt.json.client.JSONString;
 import com.google.gwt.json.client.JSONValue;
 import com.google.gwt.jsonp.client.JsonpRequestBuilder;
 import com.google.gwt.jsonp.client.TimeoutException;
+import com.google.gwt.regexp.shared.RegExp;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 
 /** Success or error. */
@@ -30,6 +35,8 @@ public class Gae {
   protected final Grond grond;
   /** Maps request id to JSONP URL. Used to automatically repeat failed requests. */
   protected final HashMap<String, String[]> gaeRequests;
+  protected final Storage localStorage = Storage.getLocalStorage();
+  protected JSONObject localCache;
 
   public Gae(final Grond grond, final HashMap<String, String[]> gaeRequests) {
     this.grond = grond;
@@ -47,6 +54,89 @@ public class Gae {
     public void onFailure(Throwable caught) {
       recipient.onFailure(caught);
     }
+  }
+
+  protected JSONObject getLocalCache() {
+    if (localCache != null) return localCache;
+    if (localStorage == null) return null;
+    try {
+      final String grondGaeCache = localStorage.getItem("grondGaeCache");
+      if (grondGaeCache != null) localCache = JSONParser.parseStrict(grondGaeCache).isObject();
+      else localCache = new JSONObject();
+      return localCache;
+    } catch (Throwable ex) {
+      Logger.getLogger("Gae.getLocalCache").severe(ex.toString());
+      return null;
+    }
+  }
+
+  protected void saveLocalCache(final String excludePattern) {
+    final JSONObject localCache = getLocalCache();
+    if (localCache == null || localStorage == null) return;
+
+    final RegExp exclude = excludePattern == null ? null : RegExp.compile(excludePattern);
+
+    // Remove expired entries.
+    final JSONObject newCache = new JSONObject();
+    try {
+      final double time = (new java.util.Date()).getTime() / 1000;
+      for (final String key : localCache.keySet()) {
+        if (exclude != null && exclude.exec(key) != null) {
+          Logger.getLogger("Gae.saveLocalCache").info(
+              "excludePattern " + excludePattern + " matched for " + key);
+          continue;
+        }
+        final JSONObject entry = localCache.get(key).isObject();
+        final double expires = entry.get("expires").isNumber().doubleValue();
+        if (time > expires) continue;
+        newCache.put(key, entry);
+      }
+    } catch (Throwable ex) {
+      Logger.getLogger("Gae.saveLocalCache").severe(ex.toString());
+    }
+
+    this.localCache = newCache;
+    localStorage.setItem("grondGaeCache", newCache.toString());
+  }
+
+  protected void cache(final int ttlSec, final String key, final JSONValue value) {
+    try {
+      final JSONObject localCache = getLocalCache();
+      if (localCache == null) return;
+      final double time = (new java.util.Date()).getTime() / 1000;
+      final JSONObject entry = new JSONObject();
+      entry.put("value", value);
+      entry.put("expires", new JSONNumber(time + ttlSec));
+      localCache.put(key, entry);
+      saveLocalCache(null);
+    } catch (Throwable ex) {
+      Logger.getLogger("Gae.cache").severe(ex.toString());
+    }
+  }
+
+  /** Returns `null` if there is no entry. */
+  protected JSONValue getCache(final String key, boolean includeExpired) {
+    try {
+      final JSONObject localCache = getLocalCache();
+      if (localCache == null) return null;
+      final JSONValue entryValue = localCache.get(key);
+      if (entryValue == null) return null;
+      final JSONObject entry = entryValue.isObject();
+      if (entry == null) return null;
+      final double expiresSec = entry.get("expires").isNumber().doubleValue();
+      final double time = (new java.util.Date()).getTime() / 1000;
+      final boolean isExpired = time > expiresSec;
+      if (isExpired && !includeExpired) return null;
+      return entry.get("value");
+    } catch (Throwable ex) {
+      Logger.getLogger("Gae.getCache").severe(ex.toString());
+      return null;
+    }
+  }
+
+  /** Remove entries matching `keyPattern`. */
+  public void cleanCache(final String keyPattern) {
+    saveLocalCache(keyPattern);
   }
 
   /** Invokes a servlet returning a string. */
@@ -196,5 +286,29 @@ public class Gae {
 
   public void ratingRemove(final String ratingId, final String field) {
     gaeUpdate(ratingId + field, "ratingId", ratingId, "field", field, "op", "ratingRemove");
+  }
+
+  /**
+   * The list of country doctors sorted by condition-related rating (cfsRating, fmRating).<br>
+   * Note: the last element returned will be a "There's more." string if the database had more than `limit` doctors.
+   */
+  public void getDoctorsByRating(final Country country, final String $region, final String condition,
+      final int limit, final AsyncCallback<JSONArray> callback) {
+    final String region = $region == null ? "" : $region;
+    final String cacheKey = "getDoctorsByRating, " + country + ", " + region + ", " + condition + ", "
+        + limit;
+    final JSONValue have = getCache(cacheKey, true);
+    if (have != null) {
+      callback.onSuccess(have.isArray());
+    }
+
+    gaeString(new ForwardingCallback<String, JSONArray>(callback) {
+      public void onSuccess(final String doctors) {
+        final JSONArray doctorsArray = JSONParser.parseStrict(doctors).isArray();
+        cache(86400 * 7 * 2, cacheKey, doctorsArray);
+        if (have == null) recipient.onSuccess(doctorsArray);
+      }
+    }, "op", "getDoctorsByRating", "country", country.id, "region", region, "condition", condition, "limit",
+        Integer.toString(limit));
   }
 }

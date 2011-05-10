@@ -6,6 +6,7 @@ import scala.collection.JavaConversions._
 import com.google.appengine.api.users.{UserServiceFactory, User}
 import com.google.appengine.api.datastore._
 import grond.model.Datastore.implicits._
+import grond.shared.Countries
 import grond.htmlunit.fun.randomAlphabeticalString
 
 /**
@@ -132,6 +133,19 @@ object doctorNameAndLocation { import doctorNameAndLocationUtility._, util._
   def remove (doctor: Doctor): Unit = {
     for (rating <- findRatings (doctor)) Datastore.SERVICE.delete (rating.getKey)
     Datastore.SERVICE.delete (KeyFactory.stringToKey (doctor.id))
+  }
+
+  def getDoctorsByRating (country: Countries.Country, region: String, condition: String, limit: Int): ju.List[Entity] = {
+    val query = new Query ("Doctor")
+    query.addFilter ("country", Query.FilterOperator.EQUAL, country.id)
+    if (region != null && region.length != 0)
+      query.addFilter ("region", Query.FilterOperator.EQUAL, region)
+    val rating = condition + "Rating"
+    query.addFilter (rating, Query.FilterOperator.NOT_EQUAL, "") // Only doctors rated for condition.
+    query.addSort (rating, Query.SortDirection.DESCENDING)
+    query.addSort ("firstName", Query.SortDirection.ASCENDING)
+    import com.google.appengine.api.datastore.FetchOptions.Builder._
+    Datastore.SERVICE.prepare (query) .asList (withLimit(limit))
   }
 }
 

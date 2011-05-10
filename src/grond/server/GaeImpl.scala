@@ -4,8 +4,9 @@ import javax.servlet.http._
 import scala.collection.JavaConversions._
 import com.google.appengine.api.datastore.{Entity, KeyFactory}
 import com.google.appengine.api.users.{UserServiceFactory, User}
-import com.google.appengine.repackaged.org.json.JSONObject
-import grond.model.{Rating, Doctor, Datastore, doctorUtil}
+import com.google.appengine.repackaged.org.json.{JSONObject, JSONArray}
+import grond.model.{Rating, Doctor, Datastore, doctorUtil, doctorNameAndLocation, UserException}
+import grond.shared.Countries
 
 /**
  * Main server interface (JSON and String responses which used from GWT).
@@ -89,7 +90,6 @@ class GaeImpl extends HttpServlet {
         val name = request getParameter "name"
         val surname = request getParameter "surname"
         val problem = request getParameter "problem"
-        import grond.model._
         try {
           val (doctor, rating, doctorCreated) = doctorNameAndLocation.getRating (
             user, name, surname, countryId, region, city, problem)
@@ -175,6 +175,21 @@ class GaeImpl extends HttpServlet {
           if (afterSave.isDefined) afterSave.get.apply
         }
         respond ("")
+      case "getDoctorsByRating" =>
+        val doctors = new JSONArray
+        val realLimit = Integer.parseInt (request getParameter "limit")
+        val entities = doctorNameAndLocation.getDoctorsByRating (
+          country = Countries.getCountry (request getParameter "country"),
+          region = request getParameter "region",
+          condition = request getParameter "condition",
+          limit = realLimit + 1)
+        for (doctor <- entities.take (realLimit)) {
+          val json = new JSONObject
+          for ((key, value) <- doctor.getProperties) {json.put (key, value)}
+          doctors.put (doctors.length(), json)
+        }
+        if (entities.size() > realLimit) doctors.put (doctors.length(), "There's more.")
+        respond (doctors.toString)
       case "nop" =>
       case op =>
         println ("Unknown op: " + op)

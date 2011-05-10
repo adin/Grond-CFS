@@ -20,7 +20,9 @@ import com.google.gwt.event.dom.client.KeyUpEvent;
 import com.google.gwt.event.dom.client.KeyUpHandler;
 import com.google.gwt.event.logical.shared.ValueChangeEvent;
 import com.google.gwt.event.logical.shared.ValueChangeHandler;
+import com.google.gwt.json.client.JSONArray;
 import com.google.gwt.json.client.JSONObject;
+import com.google.gwt.json.client.JSONValue;
 import com.google.gwt.user.client.History;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.Window;
@@ -49,6 +51,8 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
    * @see #rateFormInto
    * @see #amRegisterClick */
   protected static ListBox REGION = null;
+  protected static final char[] HEX_ENCODING_TABLE = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A',
+      'B', 'C', 'D', 'E', 'F' };
   /** Panel containing the country and condition selector (in "countryBox" on the page).
    * @see #countryBox */
   protected RootPanel countries = null;
@@ -76,7 +80,11 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
 
   public void onModuleLoad() {
     History.addValueChangeHandler(this);
-    onHistoryChange(History.getToken());
+    try {
+      onHistoryChange(History.getToken());
+    } catch (Exception ex) {
+      throw new RuntimeException(ex);
+    }
 
     getGae().getCurrentUser(new Callback<GwtUser>() {
       public void onSuccess(final GwtUser user) {
@@ -215,11 +223,15 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
 
   /** Pass History events to {@link #onHistoryChange}. */
   public void onValueChange(ValueChangeEvent<String> event) {
-    onHistoryChange(event.getValue());
+    try {
+      onHistoryChange(event.getValue());
+    } catch (Exception ex) {
+      throw new RuntimeException(ex);
+    }
   }
 
   /** Parse URL, select and render the corresponding page. */
-  protected void onHistoryChange(String token) {
+  protected void onHistoryChange(String token) throws Exception {
     // Make sure the "countryBox" container is present on the page.
     final Document document = Document.get();
     countryBox = document.getElementById("countryBox");
@@ -234,26 +246,26 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
     } else if (token.equals("test_1mmheumpihd6h")) { // Unit tests.
       initCountryBox();
       TestsRun.getInstance().testInto(countries);
-    } else if (token.startsWith("mapOf_")) { // Country page.
-      final String[] parts = parseMapOfToken(token);
-      final String countryId = parts[0];
-      final String condition = parts[1];
+    } else if (token.startsWith("mapOf_") || token.startsWith("ratingsIn_")) { // Country/Region page.
+      final String[] parts = token.split("\\_");
+      final String countryId = parts[1];
+      final String condition = parts[2];
+      final String safeRegionId = parts.length >= 4 ? parts[3] : null;
+      final String regionId = historyUnescape(safeRegionId);
       for (Country country : Countries.COUNTRIES) {
         if (countryId.equals(country.id)) {
           initCountryBox();
-          countryInfo(country, condition);
+          countryOrRegionInfo(country, regionId, condition);
         }
       }
     } else if (token.startsWith("rateIn_")) { // Add rating for country.
-      int secondUnderscore = token.indexOf('_', 7);
-      if (secondUnderscore == -1) throw new RuntimeException("Wrong map token: " + token);
-      String countryId = token.substring(7, secondUnderscore);
-      String condition = token.substring(secondUnderscore + 1);
+      final String[] parts = token.split("\\_");
+      final String countryId = parts[1];
+      final String condition = parts[2];
+      final String safeRegionId = parts.length >= 4 ? parts[3] : null;
+      final String regionId = historyUnescape(safeRegionId);
       initCountryBox();
-      rateFormInto(countries, countryId, condition);
-    } else if (token.startsWith("ratingsIn_")) { // Region page.
-      initCountryBox();
-      // ...
+      rateFormInto(countries, countryId, regionId, condition);
     } else if (token.startsWith("rateFormIn_")) {
       initCountryBox();
       final String[] parts = token.split("_");
@@ -262,17 +274,18 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
     }
   }
 
-  protected static String[] parseMapOfToken(final String mapOfToken) {
-    assert (mapOfToken.startsWith("mapOf_"));
-    final int secondUnderscore = mapOfToken.indexOf('_', 6);
-    if (secondUnderscore == -1) throw new RuntimeException("Wrong map token: " + mapOfToken);
-    final String countryId = mapOfToken.substring(6, secondUnderscore);
-    final String condition = mapOfToken.substring(secondUnderscore + 1);
-    return new String[] { countryId, condition };
-  }
+//  protected static String[] parseMapOfToken(final String mapOfToken) {
+//    assert (mapOfToken.startsWith("mapOf_"));
+//    final int secondUnderscore = mapOfToken.indexOf('_', 6);
+//    if (secondUnderscore == -1) throw new RuntimeException("Wrong map token: " + mapOfToken);
+//    final String countryId = mapOfToken.substring(6, secondUnderscore);
+//    final String condition = mapOfToken.substring(secondUnderscore + 1);
+//    return new String[] { countryId, condition };
+//  }
 
   /** A form with information necessary to proceed to the rating (doctor's name and location). */
-  protected void rateFormInto(final RootPanel root, final String countryId, final String condition) {
+  protected void rateFormInto(final RootPanel root, final String countryId, final String regionId,
+      final String condition) throws Exception {
     root.add(new Label("Thanks for participating!"));
     root.add(new Label(
         "Please enter your doctor's name and location. This is necessary to recognize one doctor from another."));
@@ -284,6 +297,7 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
     REGION = new ListBox();
     for (String title : country.getRegions()) {
       REGION.addItem(title);
+      if (regionId != null && title.equals(regionId)) REGION.setSelectedIndex(REGION.getItemCount() - 1);
     }
     root.add(new InlineLabel("State: "));
     REGION.getElement().setId("dnl-region");
@@ -402,28 +416,69 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
       data_file: '/ammap/_countries/' + mapFolder + '/ammap_data.xml'
     }
     if ($doc.getElementById('ammap') == null) alert ("Internal error: 'ammap' div not found!");
-    if ($wnd.swfobject == null) alert ("Internal error: swfobject not loaded!");
+    else if ($wnd.swfobject == null) alert ("Internal error: swfobject not loaded!");
     // http://code.google.com/p/swfobject/wiki/documentation
-    $wnd.swfobject.embedSWF ("/ammap/ammap.swf", "ammap", 800, 300, "9.0.0", null, mapArgs)
+    else $wnd.swfobject.embedSWF ("/ammap/ammap.swf", "ammap", 800, 300, "9.0.0", null, mapArgs)
   }-*/;
 
   /** AmMap callback. All parameters are null except `title`, which is a region name. */
   public static void amRegisterClick(final String map_id, final String object_id, final String title,
-      final String value) {
+      final String value) throws Exception {
     Logger.getLogger("amRegisterClick").info("Got a click from AmMap; title: " + title);
     if (title == null || title.equals("null")) return; // Ignore clicks on empty space.
     if (REGION == null) {
-      final String[] parts = parseMapOfToken(History.getToken());
-      final String countryId = parts[0];
-      final String condition = parts[1];
-      final String safeTitle = title.replaceAll("[\\W\\_\\s]+", "");
-      History.newItem("ratingsIn_" + countryId + '_' + safeTitle + '_' + condition);
+      final String[] parts = History.getToken().split("\\_");
+      final String countryId = parts[1];
+      final String condition = parts[2];
+      final String safeTitle = historyEscape(title);
+      History.newItem("ratingsIn_" + countryId + '_' + condition + '_' + safeTitle);
     } else {
       for (int i = 0; i < REGION.getItemCount(); ++i) {
         final String text = REGION.getItemText(i);
         if (text.equals(title)) REGION.setItemSelected(i, true);
       }
     }
+  }
+
+  /** We use '_' as a separator in history tokens and we need to escape it. */
+  protected static String historyEscape(final String part) throws Exception {
+    final StringBuilder sb = new StringBuilder(part.length());
+    for (int i = 0; i < part.length(); ++i) {
+      final char ch = part.charAt(i);
+      if (Character.isLetterOrDigit(ch)) {
+        sb.append(ch);
+      } else {
+        final String chs = part.substring(i, i + 1);
+        final byte[] bytes = chs.getBytes("UTF-8");
+        for (int j = 0; j < bytes.length; ++j) {
+          int v = bytes[j] & 0xff;
+          sb.append('!');
+          sb.append(HEX_ENCODING_TABLE[(v >>> 4)]);
+          sb.append(HEX_ENCODING_TABLE[v & 0xf]);
+        }
+      }
+    }
+    return sb.toString();
+  }
+
+  /** @see #historyEscape */
+  protected static String historyUnescape(final String part) throws Exception {
+    if (part == null) return null;
+    final byte[] bytes = new byte[part.length() + 4];
+    int end = 0;
+    for (int i = 0; i < part.length(); ++i) {
+      final int ch = part.charAt(i);
+      if (ch != '!' || part.length() - i < 3) {
+        final String chs = part.substring(i, i + 1);
+        final byte[] chb = chs.getBytes("UTF-8");
+        System.arraycopy(chb, 0, bytes, end, chb.length);
+        end += chb.length;
+      } else {
+        bytes[end++] = (byte) (Integer.parseInt(part.substring(i + 1, i + 3), 16) & 0xFF);
+        i += 2;
+      }
+    }
+    return new String(bytes, 0, end, "UTF-8");
   }
 
   /** Displays the condition and countries selector, leading to the map page of that country. */
@@ -465,25 +520,43 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
     countryBox.getStyle().setHeight(table.getOffsetHeight() + 30, Unit.PX);
   }
 
-  /** Puts country rating and map into {@link #countryBox}. */
-  protected void countryInfo(final Country country, final String condition) {
+  /** Puts doctor's rating and map into {@link #countryBox}.
+   * @param regionId is null for country pages. */
+  protected void countryOrRegionInfo(final Country country, final String regionId, final String condition)
+      throws Exception {
     countries.add(new Label("Condition: " + condition));
     countries.add(new Label("Rating for " + country.name));
+    if (regionId != null) countries.add(new Label("Region: " + regionId));
 
     countries.add(new HTML("<br/>"));
 
     final FlexTable topDoctors = new FlexTable();
     topDoctors.getElement().setId("topDoctors"); // For automatic testing.
     countries.add(topDoctors);
-    topDoctors.setHTML(0, 0, "Name");
-    topDoctors.setHTML(0, 1, country.id == "usa" ? "State" : "Region");
-    topDoctors.setHTML(0, 2, "City");
-    topDoctors.setHTML(0, 3, "Rating");
-    topDoctors.setHTML(1, 0, "not implemented");
-    topDoctors.setHTML(1, 1, "not implemented");
-    topDoctors.setHTML(1, 2, "not implemented");
-    topDoctors.setHTML(1, 3, "not implemented");
-    topDoctors.setWidget(1, 4, new Button("Rate!"));
+    topDoctors.setWidget(0, 0, new Image(ajaxLoaderHorisontal1()));
+    final Callback<JSONArray> renderDoctors = new Callback<JSONArray>() {
+      @Override
+      public void onSuccess(final JSONArray doctors) {
+        topDoctors.setHTML(0, 0, "Name");
+        topDoctors.setHTML(0, 1, country.id == "usa" ? "State" : "Region");
+        topDoctors.setHTML(0, 2, "City");
+        topDoctors.setHTML(0, 3, "Rating");
+
+        for (int di = 0; di < doctors.size(); ++di) {
+          final JSONObject doctor = doctors.get(di).isObject();
+          if (doctor == null) continue;
+          final JSONValue rating = doctor.get(condition + "Rating");
+          final String firstName = doctor.get("firstName").isString().stringValue();
+          final String lastName = doctor.get("lastName").isString().stringValue();
+          topDoctors.setHTML(1 + di, 0, firstName + " " + lastName);
+          topDoctors.setHTML(1 + di, 1, doctor.get("region").isString().stringValue());
+          topDoctors.setHTML(1 + di, 2, doctor.get("city").isString().stringValue());
+          if (rating != null) topDoctors.setHTML(1 + di, 3, Double.toString(rating.isNumber().doubleValue()));
+          topDoctors.setWidget(1 + di, 4, new Button("Rate!"));
+        }
+      }
+    };
+    getGae().getDoctorsByRating(country, regionId, condition, 10, renderDoctors);
 
     countries.add(new HTML("<br/>"));
 
@@ -502,7 +575,12 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
               countries.insert(new Label("Not signed in! Please sign in to add the doctor."), widgetIndex);
               countries.insert(loginForm(), widgetIndex + 1);
             } else {
-              History.newItem("rateIn_" + country.id + "_" + condition, true);
+              try {
+                History.newItem("rateIn_" + country.id + "_" + condition + "_"
+                    + (regionId != null ? historyEscape(regionId) : ""), true);
+              } catch (Exception ex) {
+                throw new RuntimeException(ex);
+              }
             }
           }
         });
@@ -513,8 +591,10 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
 
     countries.add(new HTML("<br/>"));
 
-    countries.add(new HTML("<div id='ammap'/>"));
-    ammap(country.mapFolder);
+    if (regionId == null) {
+      countries.add(new HTML("<div id='ammap'/>"));
+      ammap(country.mapFolder);
+    }
 
     // Make sure we have space for all the doctors and the login form.
     countryBox.getStyle().setHeight(countries.getOffsetHeight() + 70, Unit.PX);

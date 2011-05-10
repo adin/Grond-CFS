@@ -28,8 +28,12 @@ object doctorUtil {
       if (deltas.isEmpty) 0.0
       else deltas.sorted (math.Ordering.Int) (deltas.size / 2) .toDouble
     }
-    doctor.setProperty ("fmRating", calcMedian (fmDeltas))
-    doctor.setProperty ("cfsRating", calcMedian (cfsDeltas))
+    def saveMedian (field: String, deltas: mutable.ListBuffer[Int]) = {
+      if (deltas.isEmpty) doctor.removeProperty (field)
+      else doctor.setProperty (field, calcMedian (deltas))
+    }
+    saveMedian ("fmRating", fmDeltas)
+    saveMedian ("cfsRating", cfsDeltas)
     Datastore.SERVICE.put (doctor)
   }
 }

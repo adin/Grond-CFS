@@ -15,6 +15,7 @@ import com.google.gwt.json.client.JSONString;
 import com.google.gwt.json.client.JSONValue;
 import com.google.gwt.user.client.Command;
 import com.google.gwt.user.client.CommandCanceledException;
+import com.google.gwt.user.client.History;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.Button;
@@ -84,6 +85,7 @@ public class RatingForm {
         else if (step == 2) secondStep();
         else if (step == 3) thirdStep();
         else if (step == 4) fourthStep();
+        else if (step == 5) finish();
         else throw new RuntimeException("Unknown step: " + step);
       }
     };
@@ -432,10 +434,15 @@ public class RatingForm {
     panel.add(wizardNavigation(null));
   }
 
+  protected void finish() {
+    History.newItem("mapOf_" + countryId + "_" + condition, true);
+  }
+
   protected Panel wizardNavigation(Command nextVerifier) {
     final FlowPanel panel = new FlowPanel();
     if (step > 1) panel.add(stepButton("<- back", step - 1, null));
     if (step < 4) panel.add(stepButton("next ->", step + 1, nextVerifier));
+    else if (step == 4) panel.add(stepButton("finish", step + 1, nextVerifier));
     return panel;
   }
 
@@ -497,6 +504,9 @@ public class RatingForm {
     rating.put(field, new JSONString(value));
     if (value.length() == 0) grond.getGae().ratingRemove(ratingId, field);
     else grond.getGae().ratingUpdateString(ratingId, field, value);
+
+    // Force loading fresh rated doctor's list if the rating was changed. 
+    if (field.startsWith("actLev")) grond.getGae().cleanCache("^getDoctorsByRating");
   }
 
   protected TextBox textInput(final String field) {
