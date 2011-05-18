@@ -173,9 +173,8 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
     }
   }
 
-  protected HTMLPanel loginForm() {
-    HTMLPanel panel = new HTMLPanel(
-        "<span id='g.loginFormButtons'></span><br/><span id='g.loginFormInput'></span>");
+  protected FlowPanel loginForm() {
+    final FlowPanel panel = new FlowPanel();
 
     final String href = Window.Location.getHref();
     final String host = Window.Location.getHostName();
@@ -189,7 +188,7 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
           }
         });
       }
-    }), "g.loginFormButtons");
+    }));
 
     panel.add(new Button("Sign in with Yahoo", new ClickHandler() {
       public void onClick(ClickEvent event) {
@@ -200,11 +199,11 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
           }
         });
       }
-    }), "g.loginFormButtons");
+    }));
 
-    panel.add(new Label("OpenID:"), "g.loginFormInput");
+    panel.add(new Label("OpenID:"));
     final TextBox openid = new TextBox();
-    panel.add(openid, "g.loginFormInput");
+    panel.add(openid);
     panel.add(new Button("Sign in", new ClickHandler() {
       public void onClick(ClickEvent event) {
         getLog().info("OpenID login: " + openid.getText());
@@ -216,7 +215,7 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
           }
         });
       }
-    }), "g.loginFormInput");
+    }));
 
     return panel;
   }
@@ -552,7 +551,42 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
           topDoctors.setHTML(1 + di, 1, doctor.get("region").isString().stringValue());
           topDoctors.setHTML(1 + di, 2, doctor.get("city").isString().stringValue());
           if (rating != null) topDoctors.setHTML(1 + di, 3, Double.toString(rating.isNumber().doubleValue()));
-          topDoctors.setWidget(1 + di, 4, new Button("Rate!"));
+          final Button rate = new Button("Rate!");
+          final int currentRow = 1 + di;
+          rate.addClickHandler(new ClickHandler() {
+            @Override
+            public void onClick(final ClickEvent event) {
+              if (currentUser == null) {
+                topDoctors.setWidget(currentRow, 4, loginForm());
+              } else {
+                // Get/create a rating for this doctor.
+                final String countryId = doctor.get("country").isString().stringValue();
+                getGae().nameAndLocation(countryId, doctor.get("region").isString().stringValue(),
+                    doctor.get("city").isString().stringValue(),
+                    doctor.get("firstName").isString().stringValue(),
+                    doctor.get("lastName").isString().stringValue(), condition, new Callback<JSONObject>() {
+                      @Override
+                      public void onSuccess(final JSONObject result) {
+                        if (result.containsKey("errorMessage")) {
+                          final String message = result.get("errorMessage").isString().stringValue();
+                          Window.alert(message);
+                        } else {
+                          initCountryBox();
+                          final String ratingId = result.get("ratingId").isString().stringValue();
+                          assert ratingId.length() > 10 : "ratingId is too short";
+                          History
+                              .newItem("rateFormIn_" + countryId + '_' + condition + '_' + ratingId, false);
+                          final RatingForm form = new RatingForm(grondSelf, countryId, condition, ratingId,
+                              countries);
+                          form.rating = result;
+                          form.addToPanel();
+                        }
+                      }
+                    });
+              }
+            }
+          });
+          topDoctors.setWidget(1 + di, 4, rate);
         }
       }
     };
@@ -566,24 +600,19 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
 
       public void onClick(ClickEvent event) {
         if (loginIsVisible) return;
-        getGae().getCurrentUser(new Callback<GwtUser>() {
-          public void onSuccess(GwtUser user) {
-            currentUser = user;
-            if (user == null) {
-              int widgetIndex = countries.getWidgetIndex(addDoc);
-              countries.remove(widgetIndex);
-              countries.insert(new Label("Not signed in! Please sign in to add the doctor."), widgetIndex);
-              countries.insert(loginForm(), widgetIndex + 1);
-            } else {
-              try {
-                History.newItem("rateIn_" + country.id + "_" + condition + "_"
-                    + (regionId != null ? historyEscape(regionId) : ""), true);
-              } catch (Exception ex) {
-                throw new RuntimeException(ex);
-              }
-            }
+        if (currentUser == null) {
+          int widgetIndex = countries.getWidgetIndex(addDoc);
+          countries.remove(widgetIndex);
+          countries.insert(new Label("Not signed in! Please sign in to add the doctor."), widgetIndex);
+          countries.insert(loginForm(), widgetIndex + 1);
+        } else {
+          try {
+            History.newItem("rateIn_" + country.id + "_" + condition + "_"
+                + (regionId != null ? historyEscape(regionId) : ""), true);
+          } catch (Exception ex) {
+            throw new RuntimeException(ex);
           }
-        });
+        }
         loginIsVisible = true;
       }
     });
