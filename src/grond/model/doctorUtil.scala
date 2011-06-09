@@ -1,15 +1,16 @@
 package grond.model;
 import java.lang.{Long => JLong, Integer => JInteger, Double => JDouble}
-import java.util.{Map => JMap, HashMap => JHashMap, List => JList, LinkedList => JLinkedList}
+import java.{util => ju}
 import scala.collection.mutable, scala.collection.JavaConversions._
 import com.google.appengine.api.datastore._
 
 object doctorUtil {
-  /** Recalculate the doctor's average rate. */
-  def calculateMedianRating (doctorKey: Key): Unit = {
+  /** Recalculate the doctor's average rate, type and other rating-dependent fields. */
+  def updateFromRatings (doctorKey: Key): Unit = {
     val query = new Query ("DoctorRating", doctorKey)
     val fmDeltas = new mutable.ListBuffer[Int]
     val cfsDeltas = new mutable.ListBuffer[Int]
+    val typesCount = new mutable.HashMap[String, Int]
     for (rating <- util.queryToList (query)) {
       val problem = (rating getProperty "problem").asInstanceOf[String]
       val actLevStart = (rating getProperty "actLevStart").asInstanceOf[String]
@@ -22,6 +23,9 @@ object doctorUtil {
           case unknown => println ("calculateMedianRating: Unknown condition `" + unknown + "` in " + rating.getKey)
         }
       }
+
+      val types = (rating getProperty "type").asInstanceOf[ju.List[String]]
+      if (types != null) for (ti <- types) {typesCount.update (ti, typesCount.getOrElse (ti, 0) + 1)}
     }
     val doctor = Datastore.SERVICE.get (doctorKey)
     def calcMedian (deltas: mutable.ListBuffer[Int]): Double = {
@@ -34,6 +38,9 @@ object doctorUtil {
     }
     saveMedian ("fmRating", fmDeltas)
     saveMedian ("cfsRating", cfsDeltas)
+    val typesByCount: ju.Collection[AnyRef] = typesCount.keys.toList.sort {case (a, b) =>
+      typesCount(b) < typesCount(a) || a < b} .flatMap (k => List(k, new java.lang.Integer (typesCount (k))))
+    doctor.setProperty ("_type", typesByCount)
     Datastore.SERVICE.put (doctor)
   }
 }

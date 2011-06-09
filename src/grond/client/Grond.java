@@ -536,10 +536,14 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
     final Callback<JSONArray> renderDoctors = new Callback<JSONArray>() {
       @Override
       public void onSuccess(final JSONArray doctors) {
-        topDoctors.setHTML(0, 0, "Name");
-        topDoctors.setHTML(0, 1, country.id == "usa" ? "State" : "Region");
+        topDoctors.setHTML(0, 0, "Name of practitioner");
+        topDoctors.setHTML(0, 1, "Type of practitioner");
         topDoctors.setHTML(0, 2, "City");
-        topDoctors.setHTML(0, 3, "Rating");
+        topDoctors.setHTML(0, 3, country.id == "usa" ? "State" : "Region");
+        topDoctors.setHTML(0, 4, "# of Reviews");
+        topDoctors.setHTML(0, 5, "Average Cost");
+        topDoctors.setHTML(0, 6, "Average Satisfaction");
+        topDoctors.setHTML(0, 7, "Experience");
 
         for (int di = 0; di < doctors.size(); ++di) {
           final JSONObject doctor = doctors.get(di).isObject();
@@ -548,9 +552,18 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
           final String firstName = doctor.get("firstName").isString().stringValue();
           final String lastName = doctor.get("lastName").isString().stringValue();
           topDoctors.setHTML(1 + di, 0, firstName + " " + lastName);
-          topDoctors.setHTML(1 + di, 1, doctor.get("region").isString().stringValue());
+
+          final JSONValue typeObject = doctor.get("_type"); // Types sorted by count in ratings.
+          final JSONArray type = typeObject != null ? typeObject.isArray() : null;
+          if (type != null && type.size() != 0) {
+            String typeString = type.get(0).isString().stringValue();
+            if (type.size() > 2) typeString += ", " + type.get(2).isString().stringValue();
+            topDoctors.setHTML(1 + di, 1, typeString);
+          }
+
           topDoctors.setHTML(1 + di, 2, doctor.get("city").isString().stringValue());
-          if (rating != null) topDoctors.setHTML(1 + di, 3, Double.toString(rating.isNumber().doubleValue()));
+          topDoctors.setHTML(1 + di, 3, doctor.get("region").isString().stringValue());
+          if (rating != null) topDoctors.setHTML(1 + di, 6, Double.toString(rating.isNumber().doubleValue()));
           final Button rate = new Button("Rate!");
           final int currentRow = 1 + di;
           rate.addClickHandler(new ClickHandler() {
@@ -586,7 +599,7 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
               }
             }
           });
-          topDoctors.setWidget(1 + di, 4, rate);
+          topDoctors.setWidget(1 + di, 8, rate);
         }
       }
     };

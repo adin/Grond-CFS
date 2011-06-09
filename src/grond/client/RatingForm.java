@@ -186,7 +186,7 @@ public class RatingForm {
         ">$5000", "&gt;$5,000", "NotSure", "Not Sure"));
 
     panel.add(h3(new InlineHTML("COST:")));
-    panel.add(new InlineHTML("Average Cost of a Follow-up Appointment"));
+    panel.add(new InlineHTML("Average six months cost"));
     panel.add(new InlineHTML("<br/>"));
     panel.add(radioInput("averageCost", null, "<$100", "Less than $100", "$100-$500", "$100-$500",
         "$500-$1000", "$500-$1,000", ">$1000", "&gt;$1,000", "NotSure", "Not Sure"));
