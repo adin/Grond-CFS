@@ -10,5 +10,8 @@ case class Doctor (val id: String, var entity: Option[Entity] = None) {}
 case class Rating (val id: String, var entity: Option[Entity] = None) {}
 object Rating {
   /** Whether setProperty or setUnindexedProperty is used for the given field. */
-  def isIndexed (field: String) = false
+  def isIndexed (field: String) = field match {
+    case "satAfter" => true
+    case _ => false
+  }
 }

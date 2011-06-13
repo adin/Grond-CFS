@@ -140,7 +140,7 @@ object doctorNameAndLocation { import doctorNameAndLocationUtility._, util._
     query.addFilter ("country", Query.FilterOperator.EQUAL, country.id)
     if (region != null && region.length != 0)
       query.addFilter ("region", Query.FilterOperator.EQUAL, region)
-    val rating = condition + "Rating"
+    val rating = "_" + condition + "Satisfaction"
     query.addFilter (rating, Query.FilterOperator.NOT_EQUAL, "") // Only doctors rated for condition.
     query.addSort (rating, Query.SortDirection.DESCENDING)
     query.addSort ("firstName", Query.SortDirection.ASCENDING)

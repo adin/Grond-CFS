@@ -130,10 +130,12 @@ public class RatingForm {
     if (!rating.containsKey("problem")) ratingUpdateString("problem", condition);
 
     panel.add(new HTML("TYPE OF HEALTH PROFESSIONAL"));
-    for (String title : Arrays.asList("Family Physician", "General Internal Medicine")) {
-      panel.add(ratingBox("type", title, null));
-      panel.add(new InlineHTML("<br/>"));
-    }
+    panel.add(ratingBox("type", "Family Physician / Internist",
+        "Family Physician / General Internal Medicine"));
+//    for (String title : Arrays.asList("Family Physician", "General Internal Medicine")) {
+//      panel.add(ratingBox("type", title, null));
+//      panel.add(new InlineHTML("<br/>"));
+//    }
     panel.add(h2(new HTML(
         "<b>SPECIALISTS</b>: These doctors often require a physician's recommendation to be seen.")));
     for (String title : Arrays.asList("Allergist", "Cardiologist", "Dentist", "Endocrinologist",
@@ -237,7 +239,20 @@ public class RatingForm {
         "<b>Harmful</b> - The 'Harmful' practitioner" + " does not believe ME/CFS exists"
             + " and appears to take its existence as a personal affront."));
 
-    panel.add(wizardNavigation(null));
+    final Command verifier = new Command() {
+      @Override
+      public void execute() {
+        if (!rating.containsKey("experience")) {
+          final HTML html = new HTML(
+              "<span style='color: red; font-size: larger'>Please assess the experience level! Thanks.</span>");
+          panel.add(html);
+          Document.get().setScrollTop(
+              html.getAbsoluteTop() + html.getOffsetHeight() - Window.getClientHeight());
+          throw new CommandCanceledException(this);
+        }
+      }
+    };
+    panel.add(wizardNavigation(verifier));
   }
 
   protected void thirdStep() {
@@ -284,20 +299,7 @@ public class RatingForm {
     panel.add(h3(new InlineHTML("ACTIVITY LEVEL WHEN YOU LAST SAW THIS PRACTITIONER")));
     panel.add(radioInput("actLevEnd", null, activityLevels));
 
-    final Command verifier = new Command() {
-      @Override
-      public void execute() {
-        if (!rating.containsKey("actLevStart") || !rating.containsKey("actLevEnd")) {
-          final HTML html = new HTML(
-              "<span style='color: red; font-size: larger'>Please rate the activity levels! Thanks.</span>");
-          panel.add(html);
-          Document.get().setScrollTop(
-              html.getAbsoluteTop() + html.getOffsetHeight() - Window.getClientHeight());
-          throw new CommandCanceledException(this);
-        }
-      }
-    };
-    panel.add(wizardNavigation(verifier));
+    panel.add(wizardNavigation(null));
   }
 
   protected void fourthStep() {
@@ -431,7 +433,20 @@ public class RatingForm {
     panel.add(new HTML("&nbsp;"));
     panel.add(new HTML("Thanks for taking the time to fill out the form!"));
 
-    panel.add(wizardNavigation(null));
+    final Command verifier = new Command() {
+      @Override
+      public void execute() {
+        if (!rating.containsKey("satAfter")) {
+          final HTML html = new HTML(
+              "<span style='color: red; font-size: larger'>Please provide the overall satisfaction!</span>");
+          panel.add(html);
+          Document.get().setScrollTop(
+              html.getAbsoluteTop() + html.getOffsetHeight() - Window.getClientHeight());
+          throw new CommandCanceledException(this);
+        }
+      }
+    };
+    panel.add(wizardNavigation(verifier));
   }
 
   protected void finish() {

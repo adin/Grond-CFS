@@ -146,7 +146,7 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
       if (user.isAdmin) panel.add(test, "g.tests");
 
       final FlowPanel updatesPanel = new FlowPanel();
-      final Widget updatesFiller = new Label("GROND version 0.1");
+      final Widget updatesFiller = new Label("GROND version 0.2");
       final Image waiting = new Image(Grond.ajaxLoaderHorisontal1());
       panel.add(updatesPanel, "g.version");
       new Timer() {
@@ -548,7 +548,6 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
         for (int di = 0; di < doctors.size(); ++di) {
           final JSONObject doctor = doctors.get(di).isObject();
           if (doctor == null) continue;
-          final JSONValue rating = doctor.get(condition + "Rating");
           final String firstName = doctor.get("firstName").isString().stringValue();
           final String lastName = doctor.get("lastName").isString().stringValue();
           topDoctors.setHTML(1 + di, 0, firstName + " " + lastName);
@@ -563,7 +562,16 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
 
           topDoctors.setHTML(1 + di, 2, doctor.get("city").isString().stringValue());
           topDoctors.setHTML(1 + di, 3, doctor.get("region").isString().stringValue());
-          if (rating != null) topDoctors.setHTML(1 + di, 6, Double.toString(rating.isNumber().doubleValue()));
+          final JSONValue numberOfReviews = doctor.get("_numberOfReviews");
+          if (numberOfReviews != null) topDoctors.setHTML(1 + di, 4,
+              Integer.toString((int) numberOfReviews.isNumber().doubleValue()));
+          final JSONValue satisfaction = doctor.get("_" + condition + "Satisfaction");
+          if (satisfaction != null) topDoctors.setHTML(1 + di, 6,
+              Integer.toString((int) satisfaction.isNumber().doubleValue()));
+
+          final JSONValue experience = doctor.get("_experience");
+          if (experience != null) topDoctors.setHTML(1 + di, 7, experience.isString().stringValue());
+
           final Button rate = new Button("Rate!");
           final int currentRow = 1 + di;
           rate.addClickHandler(new ClickHandler() {

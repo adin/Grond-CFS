@@ -200,7 +200,7 @@ class GaeImpl extends HttpServlet {
    * Note: Rating is saved by the caller after this method returns.<br>
    * Returns a function which should be called after the rating is saved. */
   protected def ratingPostprocess (rating: Entity, field: String, oldValue: AnyRef): Option[()=>Unit] = field match {
-    case "actLevStart" | "actLevEnd" | "type" =>
+    case "type" | "averageCost" | "experience" | "satAfter" =>
       Some (() => doctorUtil.updateFromRatings (rating.getKey.getParent))
     case _ => None
   }
