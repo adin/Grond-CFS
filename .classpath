@@ -14,7 +14,6 @@
 	<classpathentry kind="lib" path="war/WEB-INF/lib/commons-collections-3.2.1.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/commons-io-1.4.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/commons-lang-2.4.jar"/>
-	<classpathentry kind="con" path="com.google.appengine.eclipse.core.GAE_CONTAINER"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/cssparser-0.9.5.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/htmlunit-2.8.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/htmlunit-core-js-2.8.jar"/>
@@ -33,5 +32,6 @@
 			<attribute name="javadoc_location" value="http://hudson.purpleware.org/job/GWT-HTML5-Storage/javadoc/"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="con" path="com.google.appengine.eclipse.core.GAE_CONTAINER"/>
 	<classpathentry kind="output" path="war/WEB-INF/classes"/>
 </classpath>

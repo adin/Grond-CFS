@@ -565,6 +565,18 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
           final JSONValue numberOfReviews = doctor.get("_numberOfReviews");
           if (numberOfReviews != null) topDoctors.setHTML(1 + di, 4,
               Integer.toString((int) numberOfReviews.isNumber().doubleValue()));
+
+          final JSONValue averageCostLevel = doctor.get("_averageCostLevel");
+          if (averageCostLevel != null && averageCostLevel.isNumber() != null) {
+            final int acl = (int) averageCostLevel.isNumber().doubleValue();
+            final StringBuilder html = new StringBuilder();
+            for (int lev = 1; lev <= 5; ++lev) {
+              final String clazz = lev <= acl ? "AverageCostStrong" : "AverageCostWeak";
+              html.append("<span class=\"").append(clazz).append("\">$</span>");
+            }
+            topDoctors.setHTML(1 + di, 5, html.toString());
+          }
+
           final JSONValue satisfaction = doctor.get("_" + condition + "Satisfaction");
           if (satisfaction != null) topDoctors.setHTML(1 + di, 6,
               Integer.toString((int) satisfaction.isNumber().doubleValue()));

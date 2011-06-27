@@ -57,16 +57,31 @@ object doctorUtil {
     // Experience
     try {
       val experienceLevels = List ("Harmful", "No Help", "Learner", "Informed", "Expert", "Specialist")
-      val experience = ratings.map (_.getProperty("experience").asInstanceOf[String]) .filter (_ ne null)
+      val experience = ratings.map (_.getProperty ("experience") .asInstanceOf[String]) .filter (_ ne null)
         .map (experienceLevels indexOf _) .filter (_ != -1)
-      if (!experience.isEmpty) {
-        val expAvg = experience.sum / experience.size
-        doctor.setProperty ("_experience", experienceLevels (expAvg))
-      }
+      if (experience.isEmpty) doctor.removeProperty ("_experience")
+      else doctor.setProperty ("_experience", experienceLevels (experience.sum / experience.size))
     } catch {case ex => ex.printStackTrace}
 
     // Number of reviews
     doctor.setProperty ("_numberOfReviews", ratings.size)
+
+    // Average cost
+    try {
+      // The ranges used in the "averageCost" might change with time.
+      // In order to draw sound conclusions from the variating ranges, we sample each range with a set of fixed prices.
+      val samples = Map ((300, 1), (900, 2), (1500, 3), (3600, 4), (7200, 5))
+      val ranges = ratings.map (_.getProperty ("averageCost") .asInstanceOf[String]) .filter (_ ne null)
+      val levels = ranges.flatMap {case range =>
+        // The range has a "<N", ">N" or "N1-N2" form.
+        val (begin, end) = if (range startsWith "<") (0, range.substring(1).toInt)
+          else if (range startsWith ">") (range.substring(1).toInt, Integer.MAX_VALUE)
+          else {val hyphen = range.indexOf ('-'); (range.substring (0, hyphen) .toInt, range.substring (hyphen + 1) .toInt)}
+        samples.find {case (sample, level) => begin <= sample && sample <= end} .map (_._2)
+      }
+      if (levels.isEmpty) doctor.removeProperty ("_averageCostLevel")
+      else doctor.setProperty ("_averageCostLevel", levels.sum / levels.size)
+    } catch {case ex => ex.printStackTrace}
 
     Datastore.SERVICE.put (doctor)
   }

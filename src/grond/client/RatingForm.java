@@ -188,10 +188,17 @@ public class RatingForm {
         ">$5000", "&gt;$5,000", "NotSure", "Not Sure"));
 
     panel.add(h3(new InlineHTML("COST:")));
-    panel.add(new InlineHTML("Average six months cost"));
+    panel
+        .add(new InlineHTML("Average 6 months cost"
+            + " - please include doctor's visits, tests and treatment program."
+            + " Please do not include travel"));
     panel.add(new InlineHTML("<br/>"));
-    panel.add(radioInput("averageCost", null, "<$100", "Less than $100", "$100-$500", "$100-$500",
-        "$500-$1000", "$500-$1,000", ">$1000", "&gt;$1,000", "NotSure", "Not Sure"));
+    panel.add(radioInput("averageCost", null, //
+        "<600", "Less than $600 (>$100/month)", //
+        "600-1200", "$600-$1200 ($100-$200/month)", //
+        "1200-2400", "$1200-$2400 ($200-400/month)", //
+        "2400-4800", "$2400-$4800 ($400-$800/month)", //
+        ">4800", ">$4800 (>$800/month)"));
 
     panel.add(h3(new InlineHTML("ACCEPTS INSURANCE?")));
     panel.add(new InlineHTML("<br/>"));
@@ -265,6 +272,24 @@ public class RatingForm {
 
     panel.add(h3(new InlineHTML("GENDER")));
     panel.add(radioInput("gender", null, "f", "Female", "m", "Male"));
+
+    panel.add(h3(new InlineHTML("REASON: ")));
+    panel.add(new InlineHTML("What is the main reason you choose to see this practitioner?"));
+    panel.add(radioInput("reason", null, //
+        "primary", "He/she is my primary care physician", //
+        "hpnet", "He/she was in my health provider network", //
+        "referred", "I was referred to him/her by another practitioner", //
+        "my own research", "I decided based on my own research to see him/her", //
+        "heard", "I heard about him/her from the internet/another person with CFS"));
+
+    panel.add(h3(new InlineHTML("DISTANCE: ")));
+    panel.add(new InlineHTML("How far did you travel to see this practitioner?"));
+    panel.add(radioInput("distance", null, //
+        ">50", ">50 miles", //
+        "50-100", "50-100 miles", //
+        "100-500", "100-500 miles", //
+        "500-1000", "500-1,000 miles", //
+        ">1000", ">1,000 miles"));
 
     panel.add(h3(new InlineHTML("LENGTH OF TIME SEEING PRACTITIONER")));
     panel.add(radioInput("seeingTime", null, "<6m", "Less than 6-months", "6m-1y", "Six Months to a Year",

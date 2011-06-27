@@ -4,6 +4,11 @@ div#statusLinePlacement {
   border: 1px solid;
 }
 
+/* Country info page with list of doctors. */
+
+.AverageCostStrong {color: black}
+.AverageCostWeak {color: gray}
+
 /* Rating form styles. */
 
 .GrondRatingH2 {
