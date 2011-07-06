@@ -519,6 +519,35 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
     countryBox.getStyle().setHeight(table.getOffsetHeight() + 30, Unit.PX);
   }
 
+  /** Show user that the button has been clicked: make it gray, make it live. */
+  protected Timer buttonInProgressStart(final Button button) {
+    button.setEnabled(false);
+    final Timer timer = new Timer() {
+      final String originalLabel = button.getHTML();
+      int counter = 0;
+
+      @Override
+      public void run() {
+        if (button.isEnabled()) {
+          // Restore the label after this timer is cancelled. See `buttonInProgressEnd`.
+          button.setHTML(originalLabel);
+        } else {
+          button.setHTML(originalLabel + " <span style=\"font-family: monospace\">"
+              + (counter % 3 == 0 ? ".&nbsp;&nbsp;" : counter % 3 == 1 ? "..&nbsp;" : "...") + "</span>");
+        }
+        ++counter;
+      }
+    };
+    timer.scheduleRepeating(500);
+    return timer;
+  }
+
+  protected void buttonInProgressEnd(final Button button, final Timer timer) {
+    timer.cancel();
+    button.setEnabled(true);
+    timer.run(); // Restore the button label.
+  }
+
   /** Puts doctor's rating and map into {@link #countryBox}.
    * @param regionId is null for country pages. */
   protected void countryOrRegionInfo(final Country country, final String regionId, final String condition)
@@ -537,7 +566,7 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
       @Override
       public void onSuccess(final JSONArray doctors) {
         topDoctors.setHTML(0, 0, "Name of practitioner");
-        topDoctors.setHTML(0, 1, "Type of practitioner");
+        topDoctors.setHTML(0, 1, "Type of practitioner<br/>(most people said...)");
         topDoctors.setHTML(0, 2, "City");
         topDoctors.setHTML(0, 3, country.id == "usa" ? "State" : "Region");
         topDoctors.setHTML(0, 4, "# of Reviews");
@@ -556,7 +585,7 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
           final JSONArray type = typeObject != null ? typeObject.isArray() : null;
           if (type != null && type.size() != 0) {
             String typeString = type.get(0).isString().stringValue();
-            if (type.size() > 2) typeString += ", " + type.get(2).isString().stringValue();
+            //if (type.size() > 2) typeString += ", " + type.get(2).isString().stringValue();
             topDoctors.setHTML(1 + di, 1, typeString);
           }
 
@@ -590,8 +619,10 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
             @Override
             public void onClick(final ClickEvent event) {
               if (currentUser == null) {
+                rate.setEnabled(false);
                 topDoctors.setWidget(currentRow, 4, loginForm());
               } else {
+                final Timer inProgress = buttonInProgressStart(rate);
                 // Get/create a rating for this doctor.
                 final String countryId = doctor.get("country").isString().stringValue();
                 getGae().nameAndLocation(countryId, doctor.get("region").isString().stringValue(),
@@ -600,6 +631,7 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
                     doctor.get("lastName").isString().stringValue(), condition, new Callback<JSONObject>() {
                       @Override
                       public void onSuccess(final JSONObject result) {
+                        inProgress.cancel();
                         if (result.containsKey("errorMessage")) {
                           final String message = result.get("errorMessage").isString().stringValue();
                           Window.alert(message);
