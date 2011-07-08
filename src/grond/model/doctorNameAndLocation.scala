@@ -147,6 +147,18 @@ object doctorNameAndLocation { import doctorNameAndLocationUtility._, util._
     import com.google.appengine.api.datastore.FetchOptions.Builder._
     Datastore.SERVICE.prepare (query) .asList (withLimit(limit))
   }
+
+  def getDoctorsByUser (userId: String, country: Countries.Country, region: String): Set[Entity] = {
+    val query = new Query ("DoctorRating")
+    query.addFilter ("user", Query.FilterOperator.EQUAL, userId)
+    if (country != null)
+      query.addFilter ("country", Query.FilterOperator.EQUAL, country.id)
+    if (region != null && region.length != 0)
+      query.addFilter ("region", Query.FilterOperator.EQUAL, region)
+    import com.google.appengine.api.datastore.FetchOptions.Builder._
+    val doctors = (for (rating <- Datastore.SERVICE.prepare (query) .asList (withLimit(100))) yield {rating.getParent}).toSet
+    doctors.map (Datastore.SERVICE.get _)
+  }
 }
 
 object doctorNameAndLocationUtility {

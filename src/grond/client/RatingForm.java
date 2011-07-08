@@ -546,7 +546,7 @@ public class RatingForm {
     else grond.getGae().ratingUpdateString(ratingId, field, value);
 
     // Force loading fresh rated doctor's list if the rating was changed. 
-    if (field.startsWith("actLev")) grond.getGae().cleanCache("^getDoctorsByRating");
+    grond.getGae().cleanCache("^getDoctorsByRating");
   }
 
   protected TextBox textInput(final String field) {

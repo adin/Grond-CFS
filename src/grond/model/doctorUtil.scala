@@ -2,14 +2,17 @@ package grond.model;
 import java.lang.{Long => JLong, Integer => JInteger, Double => JDouble}
 import java.{util => ju}
 import scala.collection.mutable, scala.collection.JavaConversions._
+import com.google.appengine.repackaged.org.json.{JSONObject}
 import com.google.appengine.api.datastore._
 
 object doctorUtil {
   /** Recalculate the doctor's average rate, type and other rating-dependent fields. */
   def updateFromRatings (doctorKey: Key): Unit = {
     val query = new Query ("DoctorRating", doctorKey)
-    query.addFilter ("satAfter", Query.FilterOperator.NOT_EQUAL, "") // Rating is finished if satAfter is set.
-    val ratings = util.queryToList (query)
+    val (ratings, unfinishedRatings) = util.queryToList (query) .partition {case ratingEntity =>
+      val finished = ratingEntity.getProperty ("satAfter") match {case null|"" => false; case _ => true}
+      finished
+    }
     val doctor = Datastore.SERVICE.get (doctorKey)
 
     // Average Satisfaction
@@ -81,6 +84,20 @@ object doctorUtil {
       }
       if (levels.isEmpty) doctor.removeProperty ("_averageCostLevel")
       else doctor.setProperty ("_averageCostLevel", levels.sum / levels.size)
+    } catch {case ex => ex.printStackTrace}
+
+    // Denormalized list of ratings, used to detect if the current user have rated the doctor.
+    try {
+      doctor.setProperty ("_ratings", asJavaList[String] (for (rating <- ratings ++ unfinishedRatings) yield {
+        val json = new JSONObject
+        json.put ("key/id", rating.getKey().getId())
+        val crc32 = new java.util.zip.CRC32
+        crc32.update ((rating getProperty "user").asInstanceOf[String] getBytes "UTF-8")
+        json.put ("userHash", crc32.getValue) // `_ratings` is public, therefore we're hiding the user ids behind CRC32.
+        json.put ("finished", ratings contains rating)
+        json.put ("problem", (rating getProperty "problem").asInstanceOf[String])
+        json.toString
+      }))
     } catch {case ex => ex.printStackTrace}
 
     Datastore.SERVICE.put (doctor)

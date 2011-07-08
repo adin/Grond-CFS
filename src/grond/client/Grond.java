@@ -395,6 +395,9 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
                   final RatingForm form = new RatingForm(grondSelf, countryId, condition, ratingId, root);
                   form.rating = result;
                   form.addToPanel();
+
+                  // Refresh the doctor's list.
+                  getGae().cleanCache("^getDoctorsByRating");
                 }
               }
             });
@@ -613,7 +616,15 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
           final JSONValue experience = doctor.get("_experience");
           if (experience != null) topDoctors.setHTML(1 + di, 7, experience.isString().stringValue());
 
-          final Button rate = new Button("Rate!");
+          String rateLabel = "Rate!";
+          final JSONValue fromCurrentUser = doctor.get("_fromCurrentUser");
+          if (fromCurrentUser != null) {
+            if (fromCurrentUser.isString().stringValue() == "finished") rateLabel = "Update";
+            else rateLabel = "Finish";
+          }
+          // Change the rate button label if there exists a rating for that doctor.
+
+          final Button rate = new Button(rateLabel);
           final int currentRow = 1 + di;
           rate.addClickHandler(new ClickHandler() {
             @Override

@@ -59,11 +59,13 @@ class GaeImpl extends HttpServlet {
 
     lazy val user = getUser (request)
     lazy val isAdmin = UserServiceFactory.getUserService.isUserAdmin()
+    lazy val userId = if (user.getFederatedIdentity ne null) user.getFederatedIdentity else user.getUserId
+    lazy val userHash = {val crc32 = new java.util.zip.CRC32; crc32.update (userId getBytes "UTF-8"); crc32.getValue}
 
     request.getParameter ("op") match {
       case "getCurrentUser" =>
         if (user ne null) {
-          val json = new com.google.appengine.repackaged.org.json.JSONObject
+          val json = new JSONObject
           json.put ("email", user.getEmail())
           json.put ("authDomain", user.getAuthDomain())
           json.put ("userId", user.getUserId())
@@ -96,6 +98,11 @@ class GaeImpl extends HttpServlet {
           val json = ratingToJson (rating, Some (doctor), user, checkAuth = true)
           json.put ("doctorCreated", doctorCreated)
           respond (json.toString)
+          // Update the `_ratings` field in the doctor in order to show him in `getDoctorsByRating`.
+          doctorUtil.updateFromRatings (doctor.entity match {
+            case Some (doctorEntity) => doctorEntity.getKey
+            case None => KeyFactory.stringToKey (doctor.id)
+          })
         } catch {
           case UserException (message, kind) =>
             val json = new JSONObject
@@ -178,15 +185,35 @@ class GaeImpl extends HttpServlet {
       case "getDoctorsByRating" =>
         val doctors = new JSONArray
         val realLimit = Integer.parseInt (request getParameter "limit")
+        val condition = request getParameter "condition"
         val entities = doctorNameAndLocation.getDoctorsByRating (
           country = Countries.getCountry (request getParameter "country"),
           region = request getParameter "region",
-          condition = request getParameter "condition",
+          condition = condition,
           limit = realLimit + 1)
-        for (doctor <- entities.take (realLimit)) {
+        val userDoctors = doctorNameAndLocation.getDoctorsByUser (
+          userId = userId,
+          country = Countries.getCountry (request getParameter "country"),
+          region = request getParameter "region")
+        for (doctor <- entities.take (realLimit) .toSet ++ userDoctors) {
           val json = new JSONObject
           for ((key, value) <- doctor.getProperties) {json.put (key, value)}
-          doctors.put (doctors.length(), json)
+
+          val conditions = new ju.HashSet[String]
+          // See if the current user have rated this doctor.
+          val ratingsInfo = doctor.getProperty ("_ratings") .asInstanceOf[ju.Collection[String]]
+          if (ratingsInfo != null) for (ratingInfo <- ratingsInfo) {
+            val info = new JSONObject (ratingInfo)
+            val infoUserHash = info.getLong ("userHash")
+            val finished = info.getBoolean ("finished")
+            if (userHash == infoUserHash) json.put ("_fromCurrentUser", if (finished) "finished" else "unfinished")
+
+            if (info.has ("problem")) conditions add info.getString ("problem")
+          }
+
+          val ratedForCondition = if (entities contains doctor) true else conditions contains condition
+          if (ratedForCondition)
+            doctors.put (doctors.length(), json)
         }
         if (entities.size() > realLimit) doctors.put (doctors.length(), "There's more.")
         respond (doctors.toString)
