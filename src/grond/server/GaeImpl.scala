@@ -29,6 +29,11 @@ class GaeImpl extends HttpServlet {
     } else null
   }
 
+  protected def userId (user: User) =
+    if (user.getFederatedIdentity ne null) user.getFederatedIdentity else user.getUserId
+  protected def userHash (userId: String) =
+    {val crc32 = new java.util.zip.CRC32; crc32.update (userId getBytes "UTF-8"); crc32.getValue}
+
   /** Servlet's main method. */
   protected def welcome (request: HttpServletRequest, response: HttpServletResponse): Unit = {
     response setContentType "text/javascript"
@@ -59,8 +64,6 @@ class GaeImpl extends HttpServlet {
 
     lazy val user = getUser (request)
     lazy val isAdmin = UserServiceFactory.getUserService.isUserAdmin()
-    lazy val userId = if (user.getFederatedIdentity ne null) user.getFederatedIdentity else user.getUserId
-    lazy val userHash = {val crc32 = new java.util.zip.CRC32; crc32.update (userId getBytes "UTF-8"); crc32.getValue}
 
     request.getParameter ("op") match {
       case "getCurrentUser" =>
@@ -191,26 +194,12 @@ class GaeImpl extends HttpServlet {
           region = request getParameter "region",
           condition = condition,
           limit = realLimit + 1)
-        val userDoctors = doctorNameAndLocation.getDoctorsByUser (
-          userId = userId,
+        val userDoctors = if (user eq null) Set[Entity]() else doctorNameAndLocation.getDoctorsByUser (
+          userId = userId (user),
           country = Countries.getCountry (request getParameter "country"),
           region = request getParameter "region")
         for (doctor <- entities.take (realLimit) .toSet ++ userDoctors) {
-          val json = new JSONObject
-          for ((key, value) <- doctor.getProperties) {json.put (key, value)}
-
-          val conditions = new ju.HashSet[String]
-          // See if the current user have rated this doctor.
-          val ratingsInfo = doctor.getProperty ("_ratings") .asInstanceOf[ju.Collection[String]]
-          if (ratingsInfo != null) for (ratingInfo <- ratingsInfo) {
-            val info = new JSONObject (ratingInfo)
-            val infoUserHash = info.getLong ("userHash")
-            val finished = info.getBoolean ("finished")
-            if (userHash == infoUserHash) json.put ("_fromCurrentUser", if (finished) "finished" else "unfinished")
-
-            if (info.has ("problem")) conditions add info.getString ("problem")
-          }
-
+          val (json, conditions) = doctorToJson (doctor, user)
           val ratedForCondition = if (entities contains doctor) true else conditions contains condition
           if (ratedForCondition)
             doctors.put (doctors.length(), json)
@@ -218,9 +207,42 @@ class GaeImpl extends HttpServlet {
         if (entities.size() > realLimit) doctors.put (doctors.length(), "There's more.")
         respond (doctors.toString)
       case "nop" =>
+      case "getDoctorTRP" =>
+        val doctorId = (request getParameter "doctorId").toLong
+        val needDoctorInfo = (request getParameter "needDoctorInfo").toBoolean
+        val json = new JSONObject
+
+        val doctorKey = KeyFactory.createKey ("Doctor", doctorId)
+        lazy val doctor = Datastore.SERVICE.get (doctorKey)
+
+        if (needDoctorInfo) json.put ("doctor", doctorToJson (doctor, user) ._1)
+
+        respond (json.toString)
       case op =>
         println ("Unknown op: " + op)
     }
+  }
+
+  protected def doctorToJson (doctor: Entity, user: User): (JSONObject, ju.HashSet[String]) = {
+    val json = new JSONObject
+    json.put ("_id", doctor.getKey.getId)
+    for ((key, value) <- doctor.getProperties) {json.put (key, value)}
+
+    val conditions = new ju.HashSet[String]
+    // See if the current user have rated this doctor.
+    val ratingsInfo = doctor.getProperty ("_ratings") .asInstanceOf[ju.Collection[String]]
+    if (ratingsInfo != null) for (ratingInfo <- ratingsInfo) {
+      val info = new JSONObject (ratingInfo)
+      if (user ne null) {
+        val infoUserHash = info.getLong ("userHash")
+        val finished = info.getBoolean ("finished")
+        if (userHash (userId (user)) == infoUserHash) json.put ("_fromCurrentUser", if (finished) "finished" else "unfinished")
+      }
+
+      if (info.has ("problem")) conditions add info.getString ("problem")
+    }
+
+    (json, conditions)
   }
 
   /** Do any additional actions if necessary when a rating field is updated.<br>

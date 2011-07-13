@@ -270,6 +270,11 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
       final String[] parts = token.split("_");
       final RatingForm form = new RatingForm(grondSelf, parts[1], parts[2], parts[3], countries);
       form.addToPanel();
+    } else if (token.startsWith("ptrp_")) {
+      initCountryBox();
+      int doctorId = Integer.parseInt(token.substring("ptrp_".length()));
+      final PractitionerTRP treatmentReviewPage = new PractitionerTRP(grondSelf, countries, doctorId, null);
+      treatmentReviewPage.addToPanel();
     }
   }
 
@@ -582,7 +587,20 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
           if (doctor == null) continue;
           final String firstName = doctor.get("firstName").isString().stringValue();
           final String lastName = doctor.get("lastName").isString().stringValue();
-          topDoctors.setHTML(1 + di, 0, firstName + " " + lastName);
+          final Anchor name = new Anchor(firstName + " " + lastName);
+          final int id = (int) doctor.get("_id").isNumber().doubleValue();
+          name.addClickHandler(new ClickHandler() {
+            @Override
+            public void onClick(ClickEvent event) {
+              // Open the "Practitioner Treatment Review Page".
+              History.newItem("ptrp_" + id, false);
+              initCountryBox();
+              final PractitionerTRP treatmentReviewPage = new PractitionerTRP(grondSelf, countries, id,
+                  doctor);
+              treatmentReviewPage.addToPanel();
+            }
+          });
+          topDoctors.setWidget(1 + di, 0, name);
 
           final JSONValue typeObject = doctor.get("_type"); // Types sorted by count in ratings.
           final JSONArray type = typeObject != null ? typeObject.isArray() : null;

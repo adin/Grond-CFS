@@ -311,4 +311,15 @@ public class Gae {
     }, "op", "getDoctorsByRating", "country", country.id, "region", region, "condition", condition, "limit",
         Integer.toString(limit));
   }
+
+  public void getDoctorTRP(final long doctorId, final boolean needDoctorInfo,
+      final AsyncCallback<JSONObject> callback) {
+    gaeString(new ForwardingCallback<String, JSONObject>(callback) {
+      public void onSuccess(final String info) {
+        final JSONObject json = JSONParser.parseStrict(info).isObject();
+        recipient.onSuccess(json);
+      }
+    }, "op", "getDoctorTRP", "doctorId", Long.toString(doctorId), "needDoctorInfo", needDoctorInfo ? "true"
+        : "false");
+  }
 }
