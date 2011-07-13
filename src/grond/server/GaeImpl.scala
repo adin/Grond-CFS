@@ -209,12 +209,12 @@ class GaeImpl extends HttpServlet {
       case "nop" =>
       case "getDoctorTRP" =>
         val doctorId = (request getParameter "doctorId").toLong
-        val needDoctorInfo = (request getParameter "needDoctorInfo").toBoolean
-        val json = new JSONObject
-
         val doctorKey = KeyFactory.createKey ("Doctor", doctorId)
         lazy val doctor = Datastore.SERVICE.get (doctorKey)
 
+        val json = doctorUtil.getTRPInfo (doctorKey)
+
+        val needDoctorInfo = (request getParameter "needDoctorInfo").toBoolean
         if (needDoctorInfo) json.put ("doctor", doctorToJson (doctor, user) ._1)
 
         respond (json.toString)

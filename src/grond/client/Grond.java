@@ -588,18 +588,21 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
           final String firstName = doctor.get("firstName").isString().stringValue();
           final String lastName = doctor.get("lastName").isString().stringValue();
           final Anchor name = new Anchor(firstName + " " + lastName);
-          final int id = (int) doctor.get("_id").isNumber().doubleValue();
-          name.addClickHandler(new ClickHandler() {
-            @Override
-            public void onClick(ClickEvent event) {
-              // Open the "Practitioner Treatment Review Page".
-              History.newItem("ptrp_" + id, false);
-              initCountryBox();
-              final PractitionerTRP treatmentReviewPage = new PractitionerTRP(grondSelf, countries, id,
-                  doctor);
-              treatmentReviewPage.addToPanel();
-            }
-          });
+          final JSONValue doctorId = doctor.get("_id");
+          if (doctorId != null) {
+            final int id = (int) doctorId.isNumber().doubleValue();
+            name.addClickHandler(new ClickHandler() {
+              @Override
+              public void onClick(ClickEvent event) {
+                // Open the "Practitioner Treatment Review Page".
+                History.newItem("ptrp_" + id, false);
+                initCountryBox();
+                final PractitionerTRP treatmentReviewPage = new PractitionerTRP(grondSelf, countries, id,
+                    doctor);
+                treatmentReviewPage.addToPanel();
+              }
+            });
+          }
           topDoctors.setWidget(1 + di, 0, name);
 
           final JSONValue typeObject = doctor.get("_type"); // Types sorted by count in ratings.

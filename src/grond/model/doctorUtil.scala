@@ -6,13 +6,17 @@ import com.google.appengine.repackaged.org.json.{JSONObject}
 import com.google.appengine.api.datastore._
 
 object doctorUtil {
-  /** Recalculate the doctor's average rate, type and other rating-dependent fields. */
-  def updateFromRatings (doctorKey: Key): Unit = {
+  protected def fetchRatings (doctorKey: Key): (Seq[Entity], Seq[Entity]) = {
     val query = new Query ("DoctorRating", doctorKey)
-    val (ratings, unfinishedRatings) = util.queryToList (query) .partition {case ratingEntity =>
+    util.queryToList (query) .partition {case ratingEntity =>
       val finished = ratingEntity.getProperty ("satAfter") match {case null|"" => false; case _ => true}
       finished
     }
+  }
+
+  /** Recalculate the doctor's average rate, type and other rating-dependent fields. */
+  def updateFromRatings (doctorKey: Key): Unit = {
+    val (ratings, unfinishedRatings) = fetchRatings (doctorKey)
     val doctor = Datastore.SERVICE.get (doctorKey)
 
     // Average Satisfaction
@@ -101,5 +105,20 @@ object doctorUtil {
     } catch {case ex => ex.printStackTrace}
 
     Datastore.SERVICE.put (doctor)
+  }
+
+  def getTRPInfo (doctorKey: Key): JSONObject = {
+    val json = new JSONObject
+    val (ratings, unfinishedRatings) = fetchRatings (doctorKey)
+
+    def percent (field: String, value: String): Unit = try {
+      val count = ratings.count (_.getProperty (field) .asInstanceOf[String] == value)
+      json.put (field + "Percent", 100.0 * count / ratings.size)
+    } catch {case ex => ex.printStackTrace}
+
+    percent ("insurance", "Yes")
+    percent ("ripoff", "Yes")
+
+    json
   }
 }

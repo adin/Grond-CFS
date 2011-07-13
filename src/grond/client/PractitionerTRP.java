@@ -1,5 +1,9 @@
 package grond.client;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import com.google.gwt.json.client.JSONArray;
 import com.google.gwt.json.client.JSONObject;
 import com.google.gwt.json.client.JSONValue;
 import com.google.gwt.user.client.ui.FlowPanel;
@@ -15,6 +19,7 @@ public class PractitionerTRP {
   Panel panel;
   final long doctorId;
   JSONObject doctor;
+  JSONObject trpInfo;
 
   /**
    * @param doctor Optional. The Doctor entity, if it is already available.
@@ -30,6 +35,8 @@ public class PractitionerTRP {
     grond.getGae().getDoctorTRP(doctorId, doctor == null, grond.new Callback<JSONObject>() {
       @Override
       public void onSuccess(JSONObject result) {
+        trpInfo = result;
+
         final JSONValue freshDoctorEntity = result.get("doctor");
         if (freshDoctorEntity != null) self.doctor = freshDoctorEntity.isObject();
 
@@ -47,22 +54,56 @@ public class PractitionerTRP {
     panel.add(new HTML("Practitioner Treatment Review Page"));
     if (doctor == null) {
       panel.add(new Image(Grond.ajaxLoaderHorisontal1()));
-    } else {
-      final String firstName = doctor.get("firstName").isString().stringValue();
-      final String lastName = doctor.get("lastName").isString().stringValue();
-      panel.add(new Label(firstName + " " + lastName));
-      final String city = doctor.get("city").isString().stringValue();
-      final String region = doctor.get("region").isString().stringValue();
-      panel.add(new Label("Location - " + city + "/" + region));
+    } else try {
 
-      panel.add(new Label("Type - ")); // TODO
+      final JSONValue firstName = doctor.get("firstName");
+      final JSONValue lastName = doctor.get("lastName");
+      if (firstName != null && lastName != null) panel.add(new Label(firstName.isString().stringValue() + " "
+          + lastName.isString().stringValue()));
+
+      final JSONValue city = doctor.get("city");
+      final JSONValue region = doctor.get("region");
+      if (city != null && region != null) panel.add(new Label("Location - " + city.isString().stringValue()
+          + "/" + region.isString().stringValue()));
+
+      final StringBuilder sb = new StringBuilder();
+      final JSONValue type = doctor.get("_type");
+      if (type != null) {
+        final JSONArray typea = type.isArray();
+        if (typea != null) for (int n = 0; n < typea.size(); n += 2) {
+          sb.append(typea.get(n).isString().stringValue());
+          if (n + 2 < typea.size()) sb.append("; ");
+        }
+        panel.add(new Label("Type - " + sb.toString()));
+      }
+
+      final JSONValue experience = doctor.get("_experience");
+      if (experience != null) panel.add(new Label("Average Rated Experience Level - "
+          + experience.isString().stringValue()));
+
+    } catch (Exception ex) {
+      Logger.getLogger("PractitionerTRP").log(Level.SEVERE, ex.getMessage(), ex);
+    }
+
+    if (trpInfo == null) return;
+
+    try {
+      final double insurancePercent = trpInfo.get("insurancePercent").isNumber().doubleValue();
+      panel.add(new Label("Accepts Insurance - " + Math.round(insurancePercent) + " percent say \"yes\""));
+    } catch (Exception ex) {
+      Logger.getLogger("PractitionerTRP").log(Level.SEVERE, ex.getMessage(), ex);
+    }
+
+    try {
+      final double ripoffPercent = trpInfo.get("ripoffPercent").isNumber().doubleValue();
+      panel.add(new Label("Medication Purchasing - requests patient use Drs. own supplements. - "
+          + Math.round(ripoffPercent) + " percent say \"yes\""));
+    } catch (Exception ex) {
+      Logger.getLogger("PractitionerTRP").log(Level.SEVERE, ex.getMessage(), ex);
     }
 
 /*
-Average Rated Experience Level - 
-Accepts Insurance - X percent say.....yes - just take it off the answer to that question
 Treatment Breadth - provides information on 
-Medication Purchasing - requests patient use Drs. own supplements...... - x percent say yes
 
 Then a section that shows Average Patient Condition - with a statement some practitioners - particularly ME/CFS specialists, may see a sicker group of patients...
 
