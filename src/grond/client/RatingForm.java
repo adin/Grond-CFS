@@ -2,6 +2,7 @@ package grond.client;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.logging.Logger;
 
 import com.google.gwt.dom.client.Document;
@@ -183,7 +184,7 @@ public class RatingForm {
             + " This includes the approximate fees for the first two visits;"
             + " the costs of the laboratory workup and whatever medications were prescribed."));
     panel.add(new InlineHTML("<br/>"));
-    panel.add(radioInput("initialCost", null, "<$100", "Less than $100", "$100-$500", "$100-$500",
+    panel.add(radioInput("initialCost", null, "<br/>", "<$100", "Less than $100", "$100-$500", "$100-$500",
         "$500-$1000", "$500-$1,000", "$1000-$2000", "$1.000-$2.000", "$2000-$5000", "$2,000-$5,000",
         ">$5000", "&gt;$5,000", "NotSure", "Not Sure"));
 
@@ -193,7 +194,7 @@ public class RatingForm {
             + " - please include doctor's visits, tests and treatment program."
             + " Please do not include travel"));
     panel.add(new InlineHTML("<br/>"));
-    panel.add(radioInput("averageCost", null, //
+    panel.add(radioInput("averageCost", null, "<br/>", //
         "<600", "Less than $600 (>$100/month)", //
         "600-1200", "$600-$1200 ($100-$200/month)", //
         "1200-2400", "$1200-$2400 ($200-400/month)", //
@@ -202,12 +203,12 @@ public class RatingForm {
 
     panel.add(h3(new InlineHTML("ACCEPTS INSURANCE?")));
     panel.add(new InlineHTML("<br/>"));
-    panel.add(radioInput("insurance", "-", "Yes", "Yes", "No", "No", "-", "Don't Know"));
+    panel.add(radioInput("insurance", "-", "<br/>", "Yes", "Yes", "No", "No", "-", "Don't Know"));
 
     panel.add(h3(new InlineHTML("AVERAGE LENGTH OF VISIT (not including the first two sessions):")));
     panel.add(new InlineHTML("<br/>"));
-    panel.add(radioInput("visitLength", null, "<15m", "Less than 15 minutes", "15m-30m", "15 to 30 minutes",
-        "30m-1h", "30 minutes to an hour", ">1h", "Greater than an hour"));
+    panel.add(radioInput("visitLength", null, "<br/>", "<15m", "Less than 15 minutes", "15m-30m",
+        "15 to 30 minutes", "30m-1h", "30 minutes to an hour", ">1h", "Greater than an hour"));
 
     panel.add(h3(new InlineHTML("TREATMENT BREADTH -")));
     panel.add(new InlineHTML("This practitioner provides <b>significant</b> information on:"));
@@ -223,7 +224,7 @@ public class RatingForm {
 
     panel.add(h3(new InlineHTML("MEDICATION PURCHASING")));
     panel.add(new InlineHTML("<br/>"));
-    panel.add(radioInput("ripoff", "No", "Yes",
+    panel.add(radioInput("ripoff", "No", "<br/>", "Yes",
         "Practitioner requires that patients buy alternative medications/neutraceuticals from her/him", "No",
         "Practitioner allows patients to buy alternative medications/neutraceuticals from outside sources"));
 
@@ -231,7 +232,7 @@ public class RatingForm {
     panel.add(new InlineHTML("Please provide your assessment"
         + " of your health professional's experience level at treating this disease."));
     panel.add(new InlineHTML("<br/>"));
-    panel.add(radioInput("experience", null, "Specialist",
+    panel.add(radioInput("experience", null, "<br/>", "Specialist",
         "<b>Specialist</b> - This person specializes in treating ME/CFS;"
             + " most of her/his patients have chronic fatigue syndrome.", "Expert",
         "<b>Expert</b> - The 'Expert' may not specialize" + " in chronic fatigue syndrome (ME/CFS)"
@@ -266,16 +267,16 @@ public class RatingForm {
     panel.add(new HTML("PATIENT INFORMATION"));
 
     panel.add(h3(new InlineHTML("AGE")));
-    panel.add(radioInput("age", null, "<12", "&lt; 12 years old", "12-18", "12-18 years old", "19-30",
-        "19-30 years old", "31-40", "31-40 years old", "41-50", "41-50 years old", "51-60",
+    panel.add(radioInput("age", null, "<br/>", "<12", "&lt; 12 years old", "12-18", "12-18 years old",
+        "19-30", "19-30 years old", "31-40", "31-40 years old", "41-50", "41-50 years old", "51-60",
         "51-60 years old", "61-70", "61-70 years old", ">70", "&gt; 70 years old"));
 
     panel.add(h3(new InlineHTML("GENDER")));
-    panel.add(radioInput("gender", null, "f", "Female", "m", "Male"));
+    panel.add(radioInput("gender", null, "<br/>", "f", "Female", "m", "Male"));
 
     panel.add(h3(new InlineHTML("REASON: ")));
     panel.add(new InlineHTML("What is the main reason you choose to see this practitioner?"));
-    panel.add(radioInput("reason", null, //
+    panel.add(radioInput("reason", null, "<br/>", //
         "primary", "He/she is my primary care physician", //
         "hpnet", "He/she was in my health provider network", //
         "referred", "I was referred to him/her by another practitioner", //
@@ -284,7 +285,7 @@ public class RatingForm {
 
     panel.add(h3(new InlineHTML("DISTANCE: ")));
     panel.add(new InlineHTML("How far did you travel to see this practitioner?"));
-    panel.add(radioInput("distance", null, //
+    panel.add(radioInput("distance", null, "<br/>", //
         ">50", ">50 miles", //
         "50-100", "50-100 miles", //
         "100-500", "100-500 miles", //
@@ -292,13 +293,29 @@ public class RatingForm {
         ">1000", ">1,000 miles"));
 
     panel.add(h3(new InlineHTML("LENGTH OF TIME SEEING PRACTITIONER")));
-    panel.add(radioInput("seeingTime", null, "<6m", "Less than 6-months", "6m-1y", "Six Months to a Year",
-        "1-2y", "One to Two Years", "2-5y", "Two to Five Years", ">5y", "Greater than Five Years"));
+    panel.add(radioInput("seeingTime", null, "<br/>", "<6m", "Less than 6-months", "6m-1y",
+        "Six Months to a Year", "1-2y", "One to Two Years", "2-5y", "Two to Five Years", ">5y",
+        "Greater than Five Years"));
 
     panel.add(h3(new InlineHTML("YEARS WITH ME/CFS (CHRONIC FATIGUE SYNDROME)")));
-    panel.add(radioInput("beingIll", null, "<1y", "Less Than One Year", "1-2y", "One to Two Years", "2-5y",
-        "Two to Five Years", "5-10y", "Five to Ten Years", "10-20y", "Ten to Twenty Years", ">20y",
+    panel.add(radioInput("beingIll", null, "<br/>", "<1y", "Less Than One Year", "1-2y", "One to Two Years",
+        "2-5y", "Two to Five Years", "5-10y", "Five to Ten Years", "10-20y", "Ten to Twenty Years", ">20y",
         "Greater than Twenty Years"));
+
+    panel.add(h3(new InlineHTML("OFFICE MANAGEMENT AND ORGANIZATION")));
+    panel.add(new HTML("Please rate on scale from 1-5 how well organized this practitioners office was"
+        + " (1 = chaotic, 5 = humming like a well-oiled machine)."
+        + " This applies to such things as scheduling, receiving test results on time,"
+        + " getting documents to and from the practitioner, etc."));
+    panel.add(radioNumeric("organization", 1, 5));
+
+    panel.add(h3(new InlineHTML("AVAILABILITY")));
+    panel
+        .add(new HTML(
+            "Please rate on a scale from 1-5 how available was the practitioner to you"
+                + " (1= not available outside of office visits, 5= quick response)?"
+                + " Did they respond in a timely manner to request and questions or did you have to wait, wait, wait....?"));
+    panel.add(radioNumeric("availability", 1, 5));
 
     panel.add(h3(new InlineHTML("ACTIVITY LEVEL WHEN YOU FIRST STARTED SEEING THIS PRACTITIONER")));
     final String[] activityLevels = {
@@ -319,10 +336,10 @@ public class RatingForm {
         "8", "<b>Eight</b> - Able to manage full work (sedentary)" + " plus manage a household", "9",
         "<b>Nine</b> - May exercise at approximately" + " ½-2/3rds normal without excessive fatigue", "10",
         "<b>Ten</b> - Normal" };
-    panel.add(radioInput("actLevStart", null, activityLevels));
+    panel.add(radioInput("actLevStart", null, "<br/>", activityLevels));
 
     panel.add(h3(new InlineHTML("ACTIVITY LEVEL WHEN YOU LAST SAW THIS PRACTITIONER")));
-    panel.add(radioInput("actLevEnd", null, activityLevels));
+    panel.add(radioInput("actLevEnd", null, "<br/>", activityLevels));
 
     panel.add(wizardNavigation(null));
   }
@@ -486,7 +503,8 @@ public class RatingForm {
     return panel;
   }
 
-  protected Panel radioInput(final String field, final String defaultValue, final String... valuesAndLabels) {
+  protected Panel radioInput(final String field, final String defaultValue, final String sep,
+      final String... valuesAndLabels) {
     final String haveValue = rating.containsKey(field) ? rating.get(field).isString().stringValue() : null;
 
     final FlowPanel panel = new FlowPanel();
@@ -504,9 +522,19 @@ public class RatingForm {
         if (haveValue.equals(value)) radio.setValue(true, false); // Check.
       } else if (defaultValue != null && defaultValue.equals(value)) radio.setValue(true, true); // Check and save.
       panel.add(radio);
-      panel.add(new InlineHTML("<br/>"));
+      panel.add(new InlineHTML(sep));
     }
     return panel;
+  }
+
+  protected Panel radioNumeric(final String field, final int from, final int till) {
+    final LinkedList<String> list = new LinkedList<String>();
+    for (int num = from; num <= till; ++num) {
+      final String str = Integer.toString(num);
+      list.add(str);
+      list.add(str);
+    }
+    return radioInput(field, null, " ", (String[]) list.toArray(new String[list.size()]));
   }
 
   protected Widget h2(Widget widget) {
