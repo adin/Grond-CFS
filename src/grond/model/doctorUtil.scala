@@ -118,6 +118,19 @@ object doctorUtil {
 
     percent ("insurance", "Yes")
     percent ("ripoff", "Yes")
+    
+    def percentSpread (field: String): Unit = try {
+      val spread = ratings.flatMap (_.getProperty (field) match {
+        case null => Nil
+        case col: ju.Collection[Any] => col // Multiple values in the field.
+        case value: String => value :: Nil // Single value.
+      }).groupBy (s => s)
+      val sorted = spread.map {case (value, values) => (value, values.size)} .toList.sortBy (_._2)
+      val percent = sorted.flatMap {case (value, size) => List (value, 100.0 * size / ratings.size)}
+      json.put (field + "PercentSpread", asJavaList[Any] (percent))
+    } catch {case ex => ex.printStackTrace}
+    
+    percentSpread ("treatmentBreadth")
 
     json
   }

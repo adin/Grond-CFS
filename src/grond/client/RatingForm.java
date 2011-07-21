@@ -605,7 +605,7 @@ public class RatingForm {
     rating.put(field, values);
 
     // Update the server copy.
-    grond.getGae().ratingUpdateList(ratingId, "type", value, add);
+    grond.getGae().ratingUpdateList(ratingId, field, value, add);
   }
 
   /** The value of this box is automatically synchronized with the rating and saved to the server. */

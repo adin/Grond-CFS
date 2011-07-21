@@ -102,6 +102,26 @@ public class PractitionerTRP {
       Logger.getLogger("PractitionerTRP").log(Level.SEVERE, ex.getMessage(), ex);
     }
 
+    try {
+      final JSONValue treatmentBreadthPercentSpread = trpInfo.get("treatmentBreadthPercentSpread");
+      if (treatmentBreadthPercentSpread != null) {
+        panel.add(new HTML("This practitioner provides <b>significant</b> information on:"));
+        final JSONArray spread = treatmentBreadthPercentSpread.isArray();
+        for (int num = 0; num < spread.size(); num += 2) {
+          final String value = spread.get(num).isString().stringValue();
+          final int percent = (int) spread.get(num + 1).isNumber().doubleValue();
+          String desc = value;
+          if (desc.equals("drugs")) desc = "Pharmaceutical Drugs";
+          if (desc.equals("alternativeTreatments")) desc = "Alternative Treatments (vitamins, neutraceuticals, etc.)";
+          if (desc.equals("lifestyle")) desc = "Lifestyle Management (envelope therapy, pacing, sleep hygiene, behavioral therapies, etc.)";
+          panel.add(new HTML("<span style=\"padding-left: 1em\">" + percent + "% said yes for " + desc
+              + "<span>"));
+        }
+      }
+    } catch (Exception ex) {
+      Logger.getLogger("PractitionerTRP").log(Level.SEVERE, ex.getMessage(), ex);
+    }
+
 /*
 Treatment Breadth - provides information on 
 
