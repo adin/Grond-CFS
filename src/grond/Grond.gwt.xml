@@ -26,10 +26,6 @@
        no GWT recompilation is needed. -->
 <!--  <add-linker name="xs" />-->
 
-  <!-- http://code.google.com/p/gwt-mobile-webkit/wiki/StorageApi
-       http://hudson.purpleware.org/job/GWT-HTML5-Storage/javadoc/ -->
-  <inherits name="com.google.code.gwt.storage.Html5Storage" />
-
   <!-- Specify the app entry point class.                         -->
   <entry-point class='grond.client.Grond'/>
 

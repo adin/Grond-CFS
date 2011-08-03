@@ -118,7 +118,7 @@ object doctorUtil {
 
     percent ("insurance", "Yes")
     percent ("ripoff", "Yes")
-    
+
     def percentSpread (field: String): Unit = try {
       val spread = ratings.flatMap (_.getProperty (field) match {
         case null => Nil
@@ -129,8 +129,50 @@ object doctorUtil {
       val percent = sorted.flatMap {case (value, size) => List (value, 100.0 * size / ratings.size)}
       json.put (field + "PercentSpread", asJavaList[Any] (percent))
     } catch {case ex => ex.printStackTrace}
-    
+
     percentSpread ("treatmentBreadth")
+
+    try {
+      val nums = ratings.map (_.getProperty ("actLevStart") .asInstanceOf[String]) .filter (_ != null)
+      if (nums.size > 0) {
+        val sum = nums.map (_.toInt) .sum
+        json.put ("actLevStart_average", sum / nums.size)
+      }
+    } catch {case ex => ex.printStackTrace}
+    
+    try {
+      val average = for (field <- grond.shared.Fields.levelPrefixes; suffix <- "Before" :: "After" :: Nil; val name = field + suffix) yield {
+        val values = ratings.map (_.getProperty (name) .asInstanceOf[String]) .filter (value => value != null && value.length != 0) .map (_.toInt)
+        (name, if (values.isEmpty) null else values.sum / values.size)
+      }
+      json.put ("averagePatientCondition", asJavaMap (Map (average :_*)))
+    } catch {case ex => ex.printStackTrace}
+
+    try {
+      val averageGain = grond.shared.Fields.levelPrefixes.map {case field =>
+        val gains = ratings.flatMap {case rating =>
+          val before = rating.getProperty (field + "Before") .asInstanceOf[String] match {case null|"" => None; case num => Some (num.toInt)}
+          val after = rating.getProperty (field + "After") .asInstanceOf[String] match {case null|"" => None; case num => Some (num.toInt)}
+          if (before.isDefined && after.isDefined) Some (after.get - before.get) else None
+        }
+        (field, if (gains.isEmpty) 0 else gains.sum / gains.size)
+      }
+      json.put ("averagePatientGain", asJavaMap (Map (averageGain :_*)))
+    } catch {case ex => ex.printStackTrace}
+
+    // XXX: Implement all-ratings calculations as a background / cron task.
+
+    lazy val allFinishedRatings = util.queryToList (new Query ("DoctorRating"))
+      .filter (_.getProperty ("satAfter") match {case null|"" => false; case _ => true})
+
+    try {
+      // Average condition for ALL doctors.
+      val average = for (field <- grond.shared.Fields.levelPrefixes; suffix <- "Before" :: "After" :: Nil; val name = field + suffix) yield {
+        val values = allFinishedRatings.map (_.getProperty (name) .asInstanceOf[String]) .filter (value => value != null && value.length != 0) .map (_.toInt)
+        (name, if (values.isEmpty) null else values.sum / values.size)
+      }
+      json.put ("averageAllPatientsCondition", asJavaMap (Map (average :_*)))
+    } catch {case ex => ex.printStackTrace}
 
     json
   }

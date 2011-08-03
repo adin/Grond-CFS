@@ -1,5 +1,7 @@
 package grond.client;
 
+import grond.shared.Fields;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -395,11 +397,9 @@ public class RatingForm {
       formatter.setWidth(2, i, cellWidthS);
       formatter.setWidth(2, 11 + i, cellWidthS);
       int row = 4;
-      for (final String field : Arrays.asList("energy", "sleep", "think", "pain", "mood", "ql", "sat")) {
+      for (final String field : Fields.levelPrefixes()) {
         if (i == 1) {
-          table.setHTML(row, 0, field.equals("think") ? "Thinking Ability"
-              : field.equals("ql") ? "Quality of Life" : field.equals("sat") ? "Overall Satisfaction" : field
-                  .substring(0, 1).toUpperCase() + field.substring(1));
+          table.setHTML(row, 0, Fields.levelLabel(field));
 
           formatter.setWidth(2, 22, cellWidthS);
 

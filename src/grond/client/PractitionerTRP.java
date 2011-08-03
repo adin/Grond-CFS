@@ -1,11 +1,14 @@
 package grond.client;
 
+import grond.shared.Fields;
+
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.google.gwt.json.client.JSONArray;
 import com.google.gwt.json.client.JSONObject;
 import com.google.gwt.json.client.JSONValue;
+import com.google.gwt.user.client.ui.FlexTable;
 import com.google.gwt.user.client.ui.FlowPanel;
 import com.google.gwt.user.client.ui.HTML;
 import com.google.gwt.user.client.ui.Image;
@@ -105,8 +108,9 @@ public class PractitionerTRP {
     try {
       final JSONValue treatmentBreadthPercentSpread = trpInfo.get("treatmentBreadthPercentSpread");
       if (treatmentBreadthPercentSpread != null) {
-        panel.add(new HTML("This practitioner provides <b>significant</b> information on:"));
         final JSONArray spread = treatmentBreadthPercentSpread.isArray();
+        if (spread.size() > 0) panel.add(new HTML(
+            "This practitioner provides <b>significant</b> information on:"));
         for (int num = 0; num < spread.size(); num += 2) {
           final String value = spread.get(num).isString().stringValue();
           final int percent = (int) spread.get(num + 1).isNumber().doubleValue();
@@ -122,33 +126,88 @@ public class PractitionerTRP {
       Logger.getLogger("PractitionerTRP").log(Level.SEVERE, ex.getMessage(), ex);
     }
 
+    try {
+      final JSONValue alsa = trpInfo.get("actLevStart_average");
+      if (alsa != null) {
+        int av = (int) alsa.isNumber().doubleValue();
+        panel.add(new Label("Average activity of patients when they first saw this practitioner - " + av));
+      }
+    } catch (Exception ex) {
+      Logger.getLogger("PractitionerTRP").log(Level.SEVERE, ex.getMessage(), ex);
+    }
+
+    try {
+      final JSONValue apc = trpInfo.get("averagePatientCondition");
+      final JSONValue allPatients = trpInfo.get("averageAllPatientsCondition");
+      if (apc != null && apc.isObject() != null) {
+        final JSONObject apco = apc.isObject();
+        boolean haveValues = false;
+        for (final String field : Fields.levelPrefixes()) {
+          final JSONValue value = apco.get(field + "Before");
+          if (value != null && value.isNumber() != null) {
+            haveValues = true;
+            break;
+          }
+        }
+        if (haveValues) {
+          panel.add(new Label("Average Patient Condition at the beginning of treatment for this doctor"
+              + " / average for all doctors"));
+          final FlexTable table = new FlexTable();
+          int row = 0;
+          for (final String field : Fields.levelPrefixes()) {
+            if (!field.equals("sat")) { // There isn't `satBefore`.
+              table.setHTML(row, 0, "&nbsp;&nbsp;&nbsp;");
+              table.setHTML(row, 1, Fields.levelLabel(field));
+              table.setHTML(row, 2, "&nbsp;&nbsp;&nbsp;");
+              final JSONValue value = apco.get(field + "Before");
+              if (value != null && value.isNumber() != null) {
+                table.setHTML(row, 3, Integer.toString((int) value.isNumber().doubleValue()));
+              } else {
+                table.setHTML(row, 3, "-");
+              }
+              if (allPatients != null && allPatients.isObject() != null) {
+                final JSONValue allValue = allPatients.isObject().get(field + "Before");
+                if (allValue != null && allValue.isNumber() != null) {
+                  table.setHTML(row, 4, "&nbsp;&nbsp;&nbsp;");
+                  table.setHTML(row, 5, Integer.toString((int) allValue.isNumber().doubleValue()));
+                }
+              }
+              ++row;
+            }
+          }
+          panel.add(table);
+        }
+      }
+    } catch (Exception ex) {
+      Logger.getLogger("PractitionerTRP").log(Level.SEVERE, ex.getMessage(), ex);
+    }
+
+    try {
+      final JSONValue apg = trpInfo.get("averagePatientGain");
+      if (apg != null && apg.isObject() != null) {
+        panel.add(new Label("Average GAIN"));
+        final FlexTable table = new FlexTable();
+        final JSONObject apgo = apg.isObject();
+        int row = 0;
+        for (final String field : Fields.levelPrefixes()) {
+          if (!field.equals("sat")) { // There isn't `satBefore`.
+            table.setHTML(row, 0, "&nbsp;&nbsp;&nbsp;");
+            table.setHTML(row, 1, Fields.levelLabel(field));
+            table.setHTML(row, 2, "&nbsp;&nbsp;&nbsp;");
+            final JSONValue value = apgo.get(field);
+            if (value != null && value.isNumber() != null) {
+              table.setHTML(row, 3, Integer.toString((int) value.isNumber().doubleValue()));
+            }
+            ++row;
+          }
+        }
+        panel.add(table);
+      }
+    } catch (Exception ex) {
+      Logger.getLogger("PractitionerTRP").log(Level.SEVERE, ex.getMessage(), ex);
+    }
+
 /*
-Treatment Breadth - provides information on 
-
-Then a section that shows Average Patient Condition - with a statement some practitioners - particularly ME/CFS specialists, may see a sicker group of patients...
-
-Table - Average Patient Condition at the beginning of treatment for this doctor / average for all doctors
-
- Activity
-Energy
-Sleep
-Thinking Ability
-Pain
-Mood 
-Quality of Life
-
-
-Then a table has the average benefits showing
-Average GAIN - 
-
-Activity level
-Energy
-Sleep
-Thinking Ability
-Pain
-Mood 
-Quality of Life
-
 Last Table : 
 
 Satisfaction Rating

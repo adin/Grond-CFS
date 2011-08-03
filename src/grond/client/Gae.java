@@ -6,7 +6,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.logging.Logger;
 
-import com.google.code.gwt.storage.client.Storage;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.http.client.URL;
 import com.google.gwt.json.client.JSONArray;
@@ -18,6 +17,7 @@ import com.google.gwt.json.client.JSONValue;
 import com.google.gwt.jsonp.client.JsonpRequestBuilder;
 import com.google.gwt.jsonp.client.TimeoutException;
 import com.google.gwt.regexp.shared.RegExp;
+import com.google.gwt.storage.client.Storage;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 
 /** Success or error. */
@@ -35,7 +35,7 @@ public class Gae {
   protected final Grond grond;
   /** Maps request id to JSONP URL. Used to automatically repeat failed requests. */
   protected final HashMap<String, String[]> gaeRequests;
-  protected final Storage localStorage = Storage.getLocalStorage();
+  protected final Storage localStorage = Storage.getLocalStorageIfSupported();
   protected JSONObject localCache;
 
   public Gae(final Grond grond, final HashMap<String, String[]> gaeRequests) {

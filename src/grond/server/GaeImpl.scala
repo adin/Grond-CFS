@@ -214,7 +214,7 @@ class GaeImpl extends HttpServlet {
 
         val json = doctorUtil.getTRPInfo (doctorKey)
 
-        val needDoctorInfo = (request getParameter "needDoctorInfo").toBoolean
+        val needDoctorInfo = (request getParameter "needDoctorInfo") == "true"
         if (needDoctorInfo) json.put ("doctor", doctorToJson (doctor, user) ._1)
 
         respond (json.toString)
