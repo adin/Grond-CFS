@@ -322,4 +322,12 @@ public class Gae {
     }, "op", "getDoctorTRP", "doctorId", Long.toString(doctorId), "needDoctorInfo", needDoctorInfo ? "true"
         : "false");
   }
+
+  public void getCitySuggestions(final String region, final AsyncCallback<JSONArray> callback) {
+    gaeString(new ForwardingCallback<String, JSONArray>(callback) {
+      public void onSuccess(final String array) {
+        recipient.onSuccess(JSONParser.parseStrict(array).isArray());
+      }
+    }, "op", "getCitySuggestions", "region", region);
+  }
 }

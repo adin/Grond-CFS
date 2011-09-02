@@ -5,7 +5,7 @@ import scala.collection.JavaConversions._
 import com.google.appengine.api.datastore.{Entity, KeyFactory}
 import com.google.appengine.api.users.{UserServiceFactory, User}
 import com.google.appengine.repackaged.org.json.{JSONObject, JSONArray}
-import grond.model.{Rating, Doctor, Datastore, doctorUtil, doctorNameAndLocation, UserException}
+import grond.model.{Rating, Doctor, Datastore, doctorUtil, doctorNameAndLocation, UserException, suggestions}
 import grond.shared.Countries
 
 /**
@@ -218,6 +218,8 @@ class GaeImpl extends HttpServlet {
         if (needDoctorInfo) json.put ("doctor", doctorToJson (doctor, user) ._1)
 
         respond (json.toString)
+      case "getCitySuggestions" =>
+        respond (suggestions.getCitySuggestions (request getParameter "region") .toString)
       case op =>
         println ("Unknown op: " + op)
     }

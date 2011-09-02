@@ -39,7 +39,9 @@ import com.google.gwt.user.client.ui.InlineHTML;
 import com.google.gwt.user.client.ui.InlineLabel;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.ListBox;
+import com.google.gwt.user.client.ui.MultiWordSuggestOracle;
 import com.google.gwt.user.client.ui.RootPanel;
+import com.google.gwt.user.client.ui.SuggestBox;
 import com.google.gwt.user.client.ui.TextBox;
 import com.google.gwt.user.client.ui.Widget;
 
@@ -278,15 +280,6 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
     }
   }
 
-//  protected static String[] parseMapOfToken(final String mapOfToken) {
-//    assert (mapOfToken.startsWith("mapOf_"));
-//    final int secondUnderscore = mapOfToken.indexOf('_', 6);
-//    if (secondUnderscore == -1) throw new RuntimeException("Wrong map token: " + mapOfToken);
-//    final String countryId = mapOfToken.substring(6, secondUnderscore);
-//    final String condition = mapOfToken.substring(secondUnderscore + 1);
-//    return new String[] { countryId, condition };
-//  }
-
   /** A form with information necessary to proceed to the rating (doctor's name and location). */
   protected void rateFormInto(final RootPanel root, final String countryId, final String regionId,
       final String condition) throws Exception {
@@ -309,7 +302,26 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
     root.add(new InlineHTML("<br/>"));
 
     root.add(new InlineLabel("City:"));
-    final TextBox city = new TextBox();
+    final MultiWordSuggestOracle cityOracle = new MultiWordSuggestOracle();
+    final SuggestBox city = new SuggestBox(cityOracle);
+    final ChangeHandler regionSuggestionsHandler = new ChangeHandler() {
+      @Override
+      public void onChange(final ChangeEvent event) {
+        city.setValue("");
+
+        final String region = REGION.getItemText(REGION.getSelectedIndex());
+        getGae().getCitySuggestions(region, new Callback<JSONArray>() {
+          @Override
+          public void onSuccess(final JSONArray suggestions) {
+            cityOracle.clear();
+            for (int index = 0; index < suggestions.size(); ++index)
+              cityOracle.add(suggestions.get(index).isString().stringValue());
+          }
+        });
+      }
+    };
+    regionSuggestionsHandler.onChange(null); // Populate `cityOracle`.
+    REGION.addChangeHandler(regionSuggestionsHandler); // Repopulate `cityOracle` when `REGION` changes.
     city.getElement().setId("dnl-city");
     root.add(city);
     root.add(new InlineHTML("<br/>"));
@@ -345,28 +357,11 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
     // KeyUpHandler to react immediately when the field is edited with keyboard
     // and ChangeHandler to react at all if the field is changed by mouse, javascript or unit tests.
     city.addKeyUpHandler(nextEnabler);
-    city.addChangeHandler(nextEnabler2);
+    city.getTextBox().addChangeHandler(nextEnabler2);
     name.addKeyUpHandler(nextEnabler);
     name.addChangeHandler(nextEnabler2);
     surname.addKeyUpHandler(nextEnabler);
     surname.addChangeHandler(nextEnabler2);
-
-    // TODO: Implement doctor suggestions.
-//    final KeyUpHandler suggest = new KeyUpHandler() {
-//      public void onKeyUp(final KeyUpEvent event) {
-//        if (event.getSource() == city) {
-//          final PopupPanel popup = new PopupPanel() {
-//            {
-//              setWidget(new Label("test"));
-//            }
-//          };
-//          popup.show();
-//        }
-//      }
-//    };
-//    city.addKeyUpHandler(suggest);
-//    name.addKeyUpHandler(suggest);
-//    surname.addKeyUpHandler(suggest);
 
     final HTML errorMessage = new HTML("");
     errorMessage.getElement().setId("dnl-error");
@@ -442,7 +437,11 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
     } else {
       for (int i = 0; i < REGION.getItemCount(); ++i) {
         final String text = REGION.getItemText(i);
-        if (text.equals(title)) REGION.setItemSelected(i, true);
+        if (text.equals(title)) {
+          REGION.setItemSelected(i, true);
+          REGION.fireEvent(new ChangeEvent() {
+          });
+        }
       }
     }
   }

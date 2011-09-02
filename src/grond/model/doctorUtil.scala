@@ -92,7 +92,7 @@ object doctorUtil {
 
     // Denormalized list of ratings, used to detect if the current user have rated the doctor.
     try {
-      doctor.setProperty ("_ratings", asJavaList[String] (for (rating <- ratings ++ unfinishedRatings) yield {
+      doctor.setProperty ("_ratings", seqAsJavaList[String] (for (rating <- ratings ++ unfinishedRatings) yield {
         val json = new JSONObject
         json.put ("key/id", rating.getKey().getId())
         val crc32 = new java.util.zip.CRC32
@@ -127,7 +127,7 @@ object doctorUtil {
       }).groupBy (s => s)
       val sorted = spread.map {case (value, values) => (value, values.size)} .toList.sortBy (_._2)
       val percent = sorted.flatMap {case (value, size) => List (value, 100.0 * size / ratings.size)}
-      json.put (field + "PercentSpread", asJavaList[Any] (percent))
+      json.put (field + "PercentSpread", seqAsJavaList[Any] (percent))
     } catch {case ex => ex.printStackTrace}
 
     percentSpread ("treatmentBreadth")
@@ -145,7 +145,7 @@ object doctorUtil {
         val values = ratings.map (_.getProperty (name) .asInstanceOf[String]) .filter (value => value != null && value.length != 0) .map (_.toInt)
         (name, if (values.isEmpty) null else values.sum / values.size)
       }
-      json.put ("averagePatientCondition", asJavaMap (Map (average :_*)))
+      json.put ("averagePatientCondition", mapAsJavaMap (Map (average :_*)))
     } catch {case ex => ex.printStackTrace}
 
     try {
@@ -157,7 +157,7 @@ object doctorUtil {
         }
         (field, if (gains.isEmpty) 0 else gains.sum / gains.size)
       }
-      json.put ("averagePatientGain", asJavaMap (Map (averageGain :_*)))
+      json.put ("averagePatientGain", mapAsJavaMap (Map (averageGain :_*)))
     } catch {case ex => ex.printStackTrace}
 
     // XXX: Implement all-ratings calculations as a background / cron task.
@@ -171,7 +171,7 @@ object doctorUtil {
         val values = allFinishedRatings.map (_.getProperty (name) .asInstanceOf[String]) .filter (value => value != null && value.length != 0) .map (_.toInt)
         (name, if (values.isEmpty) null else values.sum / values.size)
       }
-      json.put ("averageAllPatientsCondition", asJavaMap (Map (average :_*)))
+      json.put ("averageAllPatientsCondition", mapAsJavaMap (Map (average :_*)))
     } catch {case ex => ex.printStackTrace}
 
     json
