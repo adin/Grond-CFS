@@ -183,21 +183,23 @@ public class RatingForm {
     panel.add(new InlineHTML("Please provide your assessment"
         + " of your health professional's experience level at treating this disease."));
     panel.add(new InlineHTML("<br/>"));
-    panel.add(radioInput("experience", null, "<br/>", "Specialist",
-        "<b>Specialist</b> - This person specializes in treating ME/CFS;"
-            + " most of her/his patients have chronic fatigue syndrome.", "Knowledgeable",
-        "<b>Knowledgeable</b> - The 'Knowledgeable' may not specialize"
+    panel.add(radioInput("experience", null, "<br/>",//
+        "Specialist", "<b>Specialist</b> - This person specializes in treating ME/CFS;"
+            + " most of her/his patients have chronic fatigue syndrome.",//
+        "Knowledgeable", "<b>Knowledgeable</b> - The 'Knowledgeable' may not specialize"
             + " in chronic fatigue syndrome (ME/CFS)"
-            + " but these patients make up a significant portion of her/his practice.", "Informed",
-        "<b>Informed</b> - Chronic fatigue syndrome (ME/CFS)"
+            + " but these patients make up a significant portion of her/his practice.",//
+        "Informed", "<b>Informed</b> - Chronic fatigue syndrome (ME/CFS)"
             + " is not a major part of this person's practice"
-            + " but they appear to be knowledgeable about the disease and its treatment options.", "Learner",
-        "<b>Learner</b> - The 'Learner' does not treat" + " many chronic fatigue syndrome (ME/CFS) patients"
-            + " but is willing to learn and listen to and review patient suggestions.", "Uninformed",
-        "<b>Uninformed</b> - The 'Uninformed' practitioner"
-            + " doesn't know much about the disease and is not interested.", "Skeptic",
-        "<b>Skeptic</b> - The 'Skeptic' practitioner" + " does not believe ME/CFS exists"
-            + " and appears to take its existence as a personal affront."));
+            + " but they appear to be knowledgeable about the disease and its treatment options.",//
+        "Learner", "<b>Learner</b> - The 'Learner' does not treat"
+            + " many chronic fatigue syndrome (ME/CFS) patients"
+            + " but is willing to learn and listen to and review patient suggestions.",//
+        "Uninformed", "<b>Uninformed</b> - The 'Uninformed' practitioner"
+            + " doesn't know much about the disease and is not interested.",//
+        "Skeptic", "<b>Skeptic</b> - The 'Skeptic' practitioner" + " does not believe ME/CFS exists"
+            + " and appears to take its existence as a personal affront.",//
+        "-", "<b>I don't know</b>"));
 
     panel.add(h3(new InlineHTML("INITIAL COST:")));
     panel.add(new InlineHTML(
