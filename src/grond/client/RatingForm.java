@@ -177,7 +177,28 @@ public class RatingForm {
     panel.add(wizardNavigation(null));
   }
 
+  /** First doctor evaluation page */
   protected void secondStep() {
+    panel.add(h3(new InlineHTML("EXPERIENCE:")));
+    panel.add(new InlineHTML("Please provide your assessment"
+        + " of your health professional's experience level at treating this disease."));
+    panel.add(new InlineHTML("<br/>"));
+    panel.add(radioInput("experience", null, "<br/>", "Specialist",
+        "<b>Specialist</b> - This person specializes in treating ME/CFS;"
+            + " most of her/his patients have chronic fatigue syndrome.", "Knowledgeable",
+        "<b>Knowledgeable</b> - The 'Knowledgeable' may not specialize"
+            + " in chronic fatigue syndrome (ME/CFS)"
+            + " but these patients make up a significant portion of her/his practice.", "Informed",
+        "<b>Informed</b> - Chronic fatigue syndrome (ME/CFS)"
+            + " is not a major part of this person's practice"
+            + " but they appear to be knowledgeable about the disease and its treatment options.", "Learner",
+        "<b>Learner</b> - The 'Learner' does not treat" + " many chronic fatigue syndrome (ME/CFS) patients"
+            + " but is willing to learn and listen to and review patient suggestions.", "Uninformed",
+        "<b>Uninformed</b> - The 'Uninformed' practitioner"
+            + " doesn't know much about the disease and is not interested.", "Skeptic",
+        "<b>Skeptic</b> - The 'Skeptic' practitioner" + " does not believe ME/CFS exists"
+            + " and appears to take its existence as a personal affront."));
+
     panel.add(h3(new InlineHTML("INITIAL COST:")));
     panel.add(new InlineHTML(
         "Since costs can vary greatly even for patients seeing the same health professional"
@@ -230,24 +251,20 @@ public class RatingForm {
         "Practitioner requires that patients buy alternative medications/neutraceuticals from her/him", "No",
         "Practitioner allows patients to buy alternative medications/neutraceuticals from outside sources"));
 
-    panel.add(h3(new InlineHTML("EXPERIENCE:")));
-    panel.add(new InlineHTML("Please provide your assessment"
-        + " of your health professional's experience level at treating this disease."));
-    panel.add(new InlineHTML("<br/>"));
-    panel.add(radioInput("experience", null, "<br/>", "Specialist",
-        "<b>Specialist</b> - This person specializes in treating ME/CFS;"
-            + " most of her/his patients have chronic fatigue syndrome.", "Expert",
-        "<b>Expert</b> - The 'Expert' may not specialize" + " in chronic fatigue syndrome (ME/CFS)"
-            + " but these patients make up a significant portion of her/his practice.", "Informed",
-        "<b>Informed</b> - Chronic fatigue syndrome (ME/CFS)"
-            + " is not a major part of this person's practice"
-            + " but they appear to be knowledgeable about the disease and its treatment options.", "Learner",
-        "<b>Learner</b> - The 'Learner' does not treat" + " many chronic fatigue syndrome (ME/CFS) patients"
-            + " but is willing to learn and listen to and review patient suggestions.", "No Help",
-        "<b>No Help</b> - The 'No Help' practitioner"
-            + " doesn't know much about the disease and is not interested.", "Harmful",
-        "<b>Harmful</b> - The 'Harmful' practitioner" + " does not believe ME/CFS exists"
-            + " and appears to take its existence as a personal affront."));
+    panel.add(h3(new InlineHTML("OFFICE MANAGEMENT AND ORGANIZATION")));
+    panel.add(new HTML("Please rate on scale from 1-5 how well organized this practitioners office was"
+        + " (1 = chaotic, 5 = humming like a well-oiled machine)."
+        + " This applies to such things as scheduling, receiving test results on time,"
+        + " getting documents to and from the practitioner, etc."));
+    panel.add(radioNumeric("organization", 1, 5));
+
+    panel.add(h3(new InlineHTML("AVAILABILITY")));
+    panel
+        .add(new HTML(
+            "Please rate on a scale from 1-5 how available was the practitioner to you"
+                + " (1= not available outside of office visits, 5= quick response)?"
+                + " Did they respond in a timely manner to request and questions or did you have to wait, wait, wait....?"));
+    panel.add(radioNumeric("availability", 1, 5));
 
     final Command verifier = new Command() {
       @Override
@@ -304,20 +321,14 @@ public class RatingForm {
         "2-5y", "Two to Five Years", "5-10y", "Five to Ten Years", "10-20y", "Ten to Twenty Years", ">20y",
         "Greater than Twenty Years"));
 
-    panel.add(h3(new InlineHTML("OFFICE MANAGEMENT AND ORGANIZATION")));
-    panel.add(new HTML("Please rate on scale from 1-5 how well organized this practitioners office was"
-        + " (1 = chaotic, 5 = humming like a well-oiled machine)."
-        + " This applies to such things as scheduling, receiving test results on time,"
-        + " getting documents to and from the practitioner, etc."));
-    panel.add(radioNumeric("organization", 1, 5));
+    panel.add(wizardNavigation(null));
+  }
 
-    panel.add(h3(new InlineHTML("AVAILABILITY")));
-    panel
-        .add(new HTML(
-            "Please rate on a scale from 1-5 how available was the practitioner to you"
-                + " (1= not available outside of office visits, 5= quick response)?"
-                + " Did they respond in a timely manner to request and questions or did you have to wait, wait, wait....?"));
-    panel.add(radioNumeric("availability", 1, 5));
+  /** Second doctor evaluation page (?) */
+  protected void fourthStep() {
+    final FlexTable table = new FlexTable();
+    final FlexTable.FlexCellFormatter formatter = table.getFlexCellFormatter();
+    table.addStyleName("GrondFourthStepTable");
 
     panel.add(h3(new InlineHTML("ACTIVITY LEVEL WHEN YOU FIRST STARTED SEEING THIS PRACTITIONER")));
     final String[] activityLevels = {
@@ -342,14 +353,6 @@ public class RatingForm {
 
     panel.add(h3(new InlineHTML("ACTIVITY LEVEL WHEN YOU LAST SAW THIS PRACTITIONER")));
     panel.add(radioInput("actLevEnd", null, "<br/>", activityLevels));
-
-    panel.add(wizardNavigation(null));
-  }
-
-  protected void fourthStep() {
-    final FlexTable table = new FlexTable();
-    final FlexTable.FlexCellFormatter formatter = table.getFlexCellFormatter();
-    table.addStyleName("GrondFourthStepTable");
 
     table.setHTML(0, 1, "Please rate your symptom level"
         + " the first time you saw your practitioner and the last time you saw her/him");

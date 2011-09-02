@@ -13,6 +13,7 @@ public class Fields {
   }
 
   public static String levelLabel(final String levelPrefix) {
+    if (levelPrefix.equals("energy")) return "Ability to exercise";
     return levelPrefix.equals("think") ? "Thinking Ability" : levelPrefix.equals("ql") ? "Quality of Life"
         : levelPrefix.equals("sat") ? "Overall Satisfaction" : levelPrefix.substring(0, 1).toUpperCase()
             + levelPrefix.substring(1);

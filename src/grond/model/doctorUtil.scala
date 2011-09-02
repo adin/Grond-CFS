@@ -63,7 +63,7 @@ object doctorUtil {
 
     // Experience
     try {
-      val experienceLevels = List ("Harmful", "No Help", "Learner", "Informed", "Expert", "Specialist")
+      val experienceLevels = List ("Skeptic", "Uninformed", "Learner", "Informed", "Knowledgeable", "Specialist")
       val experience = ratings.map (_.getProperty ("experience") .asInstanceOf[String]) .filter (_ ne null)
         .map (experienceLevels indexOf _) .filter (_ != -1)
       if (experience.isEmpty) doctor.removeProperty ("_experience")

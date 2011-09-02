@@ -11,6 +11,8 @@ import com.google.gwt.json.client.JSONValue;
 import com.google.gwt.user.client.ui.FlexTable;
 import com.google.gwt.user.client.ui.FlowPanel;
 import com.google.gwt.user.client.ui.HTML;
+import com.google.gwt.user.client.ui.HasHorizontalAlignment;
+import com.google.gwt.user.client.ui.HasVerticalAlignment;
 import com.google.gwt.user.client.ui.Image;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.Panel;
@@ -130,7 +132,8 @@ public class PractitionerTRP {
       final JSONValue alsa = trpInfo.get("actLevStart_average");
       if (alsa != null) {
         int av = (int) alsa.isNumber().doubleValue();
-        panel.add(new Label("Average activity of patients when they first saw this practitioner - " + av));
+        panel.add(new Label(
+            "Level; average activity (level) of patients when they first saw this practitioner - " + av));
       }
     } catch (Exception ex) {
       Logger.getLogger("PractitionerTRP").log(Level.SEVERE, ex.getMessage(), ex);
@@ -196,7 +199,22 @@ public class PractitionerTRP {
             table.setHTML(row, 2, "&nbsp;&nbsp;&nbsp;");
             final JSONValue value = apgo.get(field);
             if (value != null && value.isNumber() != null) {
-              table.setHTML(row, 3, Integer.toString((int) value.isNumber().doubleValue()));
+              final StringBuilder sb = new StringBuilder();
+              final int gain = (int) value.isNumber().doubleValue();
+              if (gain <= 0) {
+                sb.append("<span class=\"NegativeGain\">");
+                for (int i = 0; i < -gain; ++i)
+                  sb.append('▄');
+                sb.append("</span>");
+              } else {
+                sb.append("<span class=\"PositiveGain\">");
+                for (int i = 0; i < gain; ++i)
+                  sb.append('█');
+                sb.append("</span>");
+              }
+              table.setHTML(row, gain > 0 ? 4 : 3, sb.toString());
+              table.getCellFormatter().setAlignment(row, 3, HasHorizontalAlignment.ALIGN_RIGHT,
+                  HasVerticalAlignment.ALIGN_MIDDLE);
             }
             ++row;
           }
