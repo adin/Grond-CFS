@@ -42,3 +42,12 @@ td.GrondRadioRow {
   background-color: rgb(255, 255, 204);
   border-bottom: 1px solid;
 }
+
+/* PractitionerTRP */
+
+.NegativeGain {
+  color: gray;
+}
+.PositiveGain {
+  color: green;
+}
