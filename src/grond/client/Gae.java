@@ -147,7 +147,7 @@ public class Gae {
 
     String url = GWT.getModuleBaseURL() + "gae";
     for (int i = 0; i < parameters.length - 1; i += 2) {
-      url += (i == 0 ? '?' : '&') + URL.encodeQueryString(parameters[i]) + '='
+      if (parameters[i + 1] != null) url += (i == 0 ? '?' : '&') + URL.encodeQueryString(parameters[i]) + '='
           + URL.encodeQueryString(parameters[i + 1]);
     }
 
@@ -323,11 +323,12 @@ public class Gae {
         : "false");
   }
 
-  public void getCitySuggestions(final String region, final AsyncCallback<JSONArray> callback) {
-    gaeString(new ForwardingCallback<String, JSONArray>(callback) {
+  public void getDoctorSuggestions(final String region, final String city,
+      final AsyncCallback<JSONObject> callback) {
+    gaeString(new ForwardingCallback<String, JSONObject>(callback) {
       public void onSuccess(final String array) {
-        recipient.onSuccess(JSONParser.parseStrict(array).isArray());
+        recipient.onSuccess(JSONParser.parseStrict(array).isObject());
       }
-    }, "op", "getCitySuggestions", "region", region);
+    }, "op", "getDoctorSuggestions", "region", region, "city", city);
   }
 }

@@ -18,6 +18,8 @@ import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.event.dom.client.KeyUpEvent;
 import com.google.gwt.event.dom.client.KeyUpHandler;
+import com.google.gwt.event.logical.shared.SelectionEvent;
+import com.google.gwt.event.logical.shared.SelectionHandler;
 import com.google.gwt.event.logical.shared.ValueChangeEvent;
 import com.google.gwt.event.logical.shared.ValueChangeHandler;
 import com.google.gwt.json.client.JSONArray;
@@ -42,6 +44,7 @@ import com.google.gwt.user.client.ui.ListBox;
 import com.google.gwt.user.client.ui.MultiWordSuggestOracle;
 import com.google.gwt.user.client.ui.RootPanel;
 import com.google.gwt.user.client.ui.SuggestBox;
+import com.google.gwt.user.client.ui.SuggestOracle.Suggestion;
 import com.google.gwt.user.client.ui.TextBox;
 import com.google.gwt.user.client.ui.Widget;
 
@@ -303,6 +306,7 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
 
     root.add(new InlineLabel("City:"));
     final MultiWordSuggestOracle cityOracle = new MultiWordSuggestOracle();
+    final MultiWordSuggestOracle nameOracle = new MultiWordSuggestOracle();
     final SuggestBox city = new SuggestBox(cityOracle);
     final ChangeHandler regionSuggestionsHandler = new ChangeHandler() {
       @Override
@@ -310,12 +314,18 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
         city.setValue("");
 
         final String region = REGION.getItemText(REGION.getSelectedIndex());
-        getGae().getCitySuggestions(region, new Callback<JSONArray>() {
+        getGae().getDoctorSuggestions(region, null, new Callback<JSONObject>() {
           @Override
-          public void onSuccess(final JSONArray suggestions) {
+          public void onSuccess(final JSONObject suggestions) {
+            final JSONArray cities = suggestions.get("cities").isArray();
             cityOracle.clear();
-            for (int index = 0; index < suggestions.size(); ++index)
-              cityOracle.add(suggestions.get(index).isString().stringValue());
+            for (int index = 0; index < cities.size(); ++index)
+              cityOracle.add(cities.get(index).isString().stringValue());
+
+            final JSONArray names = suggestions.get("names").isArray();
+            nameOracle.clear();
+            for (int index = 0; index < names.size(); ++index)
+              nameOracle.add(names.get(index).isString().stringValue());
           }
         });
       }
@@ -327,13 +337,26 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
     root.add(new InlineHTML("<br/>"));
 
     root.add(new InlineLabel("Name:"));
-    final TextBox name = new TextBox();
+    final SuggestBox name = new SuggestBox(nameOracle);
+    final TextBox surname = new TextBox();
+    name.addSelectionHandler(new SelectionHandler<Suggestion>() {
+      @Override
+      public void onSelection(final SelectionEvent<Suggestion> event) {
+        final String selected = event.getSelectedItem().getReplacementString();
+        final int space = selected.indexOf(' ');
+        final int comma = selected.indexOf(',');
+        if (space > 0 && comma > 0 && space < comma) {
+          name.setValue(selected.substring(0, space));
+          surname.setValue(selected.substring(space + 1, comma));
+          city.setValue(selected.substring(comma + 1));
+        }
+      }
+    });
     name.getElement().setId("dnl-name");
     root.add(name);
     root.add(new InlineHTML("<br/>"));
 
     root.add(new InlineLabel("Surname:"));
-    final TextBox surname = new TextBox();
     surname.getElement().setId("dnl-surname");
     root.add(surname);
     root.add(new InlineHTML("<br/>"));
@@ -359,7 +382,7 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
     city.addKeyUpHandler(nextEnabler);
     city.getTextBox().addChangeHandler(nextEnabler2);
     name.addKeyUpHandler(nextEnabler);
-    name.addChangeHandler(nextEnabler2);
+    name.getTextBox().addChangeHandler(nextEnabler2);
     surname.addKeyUpHandler(nextEnabler);
     surname.addChangeHandler(nextEnabler2);
 

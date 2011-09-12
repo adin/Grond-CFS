@@ -224,13 +224,12 @@ public class PractitionerTRP {
     } catch (Exception ex) {
       Logger.getLogger("PractitionerTRP").log(Level.SEVERE, ex.getMessage(), ex);
     }
+    
+    try {
+      
+    } catch (Exception ex) {
+      Logger.getLogger("PractitionerTRP").log(Level.SEVERE, ex.getMessage(), ex);
+    }
 
-/*
-Last Table : 
-
-Satisfaction Rating
-
-Ave for this practitioners/ Average for all practitioners 
- */
   }
 }

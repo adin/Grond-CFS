@@ -218,8 +218,8 @@ class GaeImpl extends HttpServlet {
         if (needDoctorInfo) json.put ("doctor", doctorToJson (doctor, user) ._1)
 
         respond (json.toString)
-      case "getCitySuggestions" =>
-        respond (suggestions.getCitySuggestions (request getParameter "region") .toString)
+      case "getDoctorSuggestions" =>
+        respond (suggestions.getDoctorSuggestions (request getParameter "region", request getParameter "city") .toString)
       case op =>
         println ("Unknown op: " + op)
     }
