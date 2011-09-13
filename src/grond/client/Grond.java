@@ -336,10 +336,9 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
     root.add(city);
     root.add(new InlineHTML("<br/>"));
 
-    root.add(new InlineLabel("Name:"));
     final SuggestBox name = new SuggestBox(nameOracle);
-    final TextBox surname = new TextBox();
-    name.addSelectionHandler(new SelectionHandler<Suggestion>() {
+    final SuggestBox surname = new SuggestBox(nameOracle);
+    final SelectionHandler<Suggestion> nameSuggestionHandler = new SelectionHandler<Suggestion>() {
       @Override
       public void onSelection(final SelectionEvent<Suggestion> event) {
         final String selected = event.getSelectedItem().getReplacementString();
@@ -351,7 +350,11 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
           city.setValue(selected.substring(comma + 1));
         }
       }
-    });
+    };
+    name.addSelectionHandler(nameSuggestionHandler);
+    surname.addSelectionHandler(nameSuggestionHandler);
+
+    root.add(new InlineLabel("Name:"));
     name.getElement().setId("dnl-name");
     root.add(name);
     root.add(new InlineHTML("<br/>"));
@@ -384,7 +387,7 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
     name.addKeyUpHandler(nextEnabler);
     name.getTextBox().addChangeHandler(nextEnabler2);
     surname.addKeyUpHandler(nextEnabler);
-    surname.addChangeHandler(nextEnabler2);
+    surname.getTextBox().addChangeHandler(nextEnabler2);
 
     final HTML errorMessage = new HTML("");
     errorMessage.getElement().setId("dnl-error");
