@@ -1,0 +1,10 @@
+/appengine-api-*.jar
+/appengine-jsr107cache-*.jar
+/datanucleus-appengine-*.jar
+/datanucleus-core-*.jar
+/datanucleus-jpa-*.jar
+/geronimo-jpa_*.jar
+/geronimo-jta_*.jar
+/gwt-servlet.jar
+/jdo2-api-*.jar
+/jsr107cache-*.jar

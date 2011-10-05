@@ -1,0 +1,6 @@
+/.gwt/
+/.settings/
+/war/grond/
+/war/WEB-INF/appengine-generated/
+/war/WEB-INF/deploy/
+/gwt-unitCache
