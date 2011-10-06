@@ -4,9 +4,8 @@ import javax.servlet.http.{HttpServletRequest, HttpSession}
 import javax.jdo.PersistenceManager
 import scala.collection.JavaConversions._
 import com.google.appengine.api.users.{UserServiceFactory, User}
-import com.google.appengine.api.datastore._
-import grond.model.Datastore.implicits._
-import grond.shared.Countries
+import com.googlecode.objectify.{Query, Key}
+import grond.shared.{Countries, Doctor, DoctorRating}
 import grond.htmlunit.fun.randomAlphabeticalString
 
 /**
@@ -26,17 +25,15 @@ object doctorNameAndLocation { import doctorNameAndLocationUtility._, util._
         problem = if (random.nextBoolean) "cfs" else "fm")
       outerDoctor = doctor
       val userRatings = findRatings (user)
-      assert (KeyFactory.keyToString (userRatings.head.getKey) == rating.id)
+      assert (userRatings.head.id == rating.id)
       val doctorRatings = findRatings (doctor)
-      assert (KeyFactory.keyToString (doctorRatings.head.getKey) == rating.id)
+      assert (doctorRatings.head.id == rating.id)
     } finally {
       remove (user)
-      assert (findRatings (user) .isEmpty)
+      assert (findRatings (user) .fetchKeys() .isEmpty)
 
-      if (outerDoctor ne null) {
-        remove (outerDoctor)
-        assert (queryToList (new Query (KeyFactory.stringToKey (outerDoctor.id))) .isEmpty)
-      }
+      if (outerDoctor ne null)
+        assert (OFY.find (classOf[Doctor], outerDoctor.id) == null)
     }
   }
 
@@ -47,28 +44,10 @@ object doctorNameAndLocation { import doctorNameAndLocationUtility._, util._
    * Returns `true` if a new doctor entry was created. */
   def getRating (user: User,
     doctorFirstName: String, doctorLastName: String,
-    country: String, region: String, city: String, problem: String): (Doctor, Rating, Boolean) = {
-
-    // TODO: Additional checks for all parameters?
-    // (Like name and surname starting with a capital and not being a single letter).
+    country: String, region: String, city: String, problem: String): (Doctor, DoctorRating, Boolean) = {
 
     if (user eq null) throw new UserException (
       "You are not signed in! You must sign in to submit the info.", 1)
-    val datastore = Datastore.SERVICE
-
-//    // See if the user asks to edit an existing rating.
-//    val editRating = request.getParameter ("editRating"); if (editRating ne null) {
-//      val key = KeyFactory.stringToKey (editRating)
-//      val rating = datastore.get (key)
-//
-//      val ratingOpenID = rating ("userOpenID")
-//      if (ratingOpenID != api.getUser.id) throw new UserException ("Owned by another user.", 5)
-//
-//      val sesIdKey = "rating id for " + rating ("lastName") + ", " + rating ("firstName")
-//      session.setAttribute (sesIdKey, KeyFactory.keyToString (rating.getKey))
-//      currentRating = VeloEntity (rating)
-//      return pathInfo
-//    }
 
     val firstName = doctorFirstName.trim
     val lastName = doctorLastName.trim
@@ -97,67 +76,51 @@ object doctorNameAndLocation { import doctorNameAndLocationUtility._, util._
     val (doctor, doctorCreated) = newOrExistingDoctor (country, region, city, firstName, lastName)
     val rating = newOrExistingRating (doctor, user)
 
-    // Save doctor's data not used during Entity creation.
-    rating.setUnindexedProperty ("problem", problem)
+    rating.problem = problem
 
-// That data isn't necessary for doctor's creation and should be updated in a separate method!
-//    // Save data into the rating.
-//    for (name <- "street" :: "phone" :: "email" :: "website" :: Nil) {
-//      rating.setUnindexedProperty (name, api.trimmedParameter (name))
-//    }
-
-    rating.setProperty ("lastUpdate", new java.util.Date)
+    rating.lastUpdate = new java.util.Date
 
     // Save rating.
-    Datastore.SERVICE.put (rating)
-    (Doctor (KeyFactory.keyToString (doctor.getKey), Some (doctor)),
-     Rating (KeyFactory.keyToString (rating.getKey), Some (rating)),
-     doctorCreated)
+    OFY.async().put[DoctorRating] (rating)
+    (doctor, rating, doctorCreated)
   }
 
-  def findRatings (user: User): ju.List[Entity] = {
-    val query = new Query ("DoctorRating")
+  def findRatings (user: User): Query[DoctorRating] = {
     val userId = if (user.getFederatedIdentity ne null) user.getFederatedIdentity else user.getUserId
-    query.addFilter ("user", Query.FilterOperator.EQUAL, userId)
-    queryToList (query)
+    OFY.query (classOf[DoctorRating]) .filter ("user", userId)
   }
 
-  def findRatings (doctor: Doctor): ju.List[Entity] = {
-    queryToList (new Query ("DoctorRating", KeyFactory.stringToKey (doctor.id)))
+  def findRatings (doctor: Doctor): Query[DoctorRating] = {
+    OFY.query (classOf[DoctorRating]) .ancestor(doctor)
   }
 
   def remove (user: User): Unit = {
-    for (rating <- findRatings (user)) Datastore.SERVICE.delete (rating.getKey)
+    OFY.delete (findRatings (user))
   }
 
   def remove (doctor: Doctor): Unit = {
-    for (rating <- findRatings (doctor)) Datastore.SERVICE.delete (rating.getKey)
-    Datastore.SERVICE.delete (KeyFactory.stringToKey (doctor.id))
+    OFY.delete (findRatings (doctor))
+    OFY.delete (doctor)
   }
 
-  def getDoctorsByRating (country: Countries.Country, region: String, condition: String, limit: Int): ju.List[Entity] = {
-    val query = new Query ("Doctor")
-    query.addFilter ("country", Query.FilterOperator.EQUAL, country.id)
-    if (region != null && region.length != 0)
-      query.addFilter ("region", Query.FilterOperator.EQUAL, region)
+  def getDoctorsByRating (country: Countries.Country, region: String, condition: String, limit: Int): Query[Doctor] = {
+    val query = OFY.query (classOf[Doctor])
+    query.filter ("country", country.id)
+    if (region != null && region.length != 0) query.filter ("region", region)
     val rating = "_" + condition + "Satisfaction"
-    query.addFilter (rating, Query.FilterOperator.NOT_EQUAL, "") // Only doctors rated for condition.
-    query.addSort (rating, Query.SortDirection.DESCENDING)
-    query.addSort ("firstName", Query.SortDirection.ASCENDING)
-    import com.google.appengine.api.datastore.FetchOptions.Builder._
-    Datastore.SERVICE.prepare (query) .asList (withLimit(limit))
+    query.filter (rating + " !=", "") // Only doctors rated for condition.
+    query.order ("-" + rating)
+    query.order ("firstName")
+    query.limit (limit)
+    query
   }
 
-  def getDoctorsByUser (userId: String, country: Countries.Country, region: String): Set[Entity] = {
-    val query = new Query ("DoctorRating")
-    query.addFilter ("user", Query.FilterOperator.EQUAL, userId)
-    if (country != null)
-      query.addFilter ("country", Query.FilterOperator.EQUAL, country.id)
-    if (region != null && region.length != 0)
-      query.addFilter ("region", Query.FilterOperator.EQUAL, region)
-    import com.google.appengine.api.datastore.FetchOptions.Builder._
-    val doctors = (for (rating <- Datastore.SERVICE.prepare (query) .asList (withLimit(100))) yield {rating.getParent}).toSet
-    doctors.map (Datastore.SERVICE.get _)
+  def getDoctorsByUser (userId: String, country: Countries.Country, region: String): Iterable[Doctor] = {
+    val query = OFY.query (classOf[DoctorRating])
+    query.filter ("user", userId)
+    if (country != null) query.filter ("country", country.id)
+    if (region != null && region.length != 0) query.filter ("region", region)
+    query.fetchParents[Doctor]().values()
   }
 }
 
@@ -166,50 +129,51 @@ object doctorNameAndLocationUtility {
    * or create a new one if not found.<br>
    * Returns `true` if a new doctor entry was created. */
   def newOrExistingDoctor (country: String, region: String, city: String,
-  firstName: String, lastName: String): (Entity, Boolean) = {
+  firstName: String, lastName: String): (Doctor, Boolean) = {
 
-    val query = new Query ("Doctor")
+    val query = OFY.query (classOf[Doctor])
     // NB: In order for these equality filters to work the fields must use the automatic indexing (e.g. setProperty).
     //     Cf. http://code.google.com/intl/en/appengine/articles/index_building.html:
     //     "built-in indexes can handle" ... "equality filters on any number of properties".
-    query.addFilter ("country", Query.FilterOperator.EQUAL, country)
-    query.addFilter ("region", Query.FilterOperator.EQUAL, region)
-    query.addFilter ("city", Query.FilterOperator.EQUAL, city)
-    query.addFilter ("firstName", Query.FilterOperator.EQUAL, firstName)
-    query.addFilter ("lastName", Query.FilterOperator.EQUAL, lastName)
-    val doctor = Datastore.SERVICE.prepare (query) .asSingleEntity
+    query.filter ("country", country)
+    query.filter ("region", region)
+    query.filter ("city", city)
+    query.filter ("firstName", firstName)
+    query.filter ("lastName", lastName)
+    val doctor = query.get()
     if (doctor ne null) (doctor, false) else {
-      val doctor = new Entity ("Doctor")
-      doctor.setProperty ("country", country)
-      doctor.setProperty ("region", region)
-      doctor.setProperty ("city", city)
-      doctor.setProperty ("firstName", firstName)
-      doctor.setProperty ("lastName", lastName)
-      Datastore.SERVICE.put (doctor)
+      val doctor = new Doctor
+      doctor.country = country;
+      doctor.region = region;
+      doctor.city = city;
+      doctor.firstName = firstName;
+      doctor.lastName = lastName;
+      OFY.put (classOf[Doctor], doctor)
       println ("doctorNameAndLocation; new doctor: " + doctor)
       (doctor, true)
     }
   }
   /** Create new rating, but only once (one doctor rating per user). New rating's aren't persisted. */
-  def newOrExistingRating (doctor: Entity, user: User): Entity = {
+  def newOrExistingRating (doctor: Doctor, user: User): DoctorRating = {
     // Should store userId instead of User (which just stores email):
     // http://groups.google.com/group/google-appengine-java/browse_thread/thread/9fe6e35c84fda0e2/53e7294aa57e9a31
     val userId = if (user.getFederatedIdentity ne null) user.getFederatedIdentity else user.getUserId
 
     def newRating = {
-      val rating = new Entity ("DoctorRating", doctor.getKey)
-      rating.setProperty ("country", doctor ("country"))
-      rating.setProperty ("region", doctor ("region"))
-      rating.setProperty ("city", doctor ("city"))
-      rating.setProperty ("firstName", doctor ("firstName"))
-      rating.setProperty ("lastName", doctor ("lastName"))
-      rating.setProperty ("user", userId)
-      if (user.getEmail ne null) rating.setProperty("userEmail", user.getEmail)
+      val rating = new DoctorRating
+      rating.doctor = new Key (classOf[Doctor], doctor.id)
+      rating.country = doctor.country
+      rating.region = doctor.region
+      rating.city = doctor.city
+      rating.firstName = doctor.firstName
+      rating.lastName = doctor.lastName
+      rating.user = userId
+      if (user.getEmail ne null) rating.userEmail = user.getEmail
       rating
     }
-    val query = new Query ("DoctorRating", doctor.getKey)
-    query.addFilter ("user", Query.FilterOperator.EQUAL, userId)
-    val rating = Datastore.SERVICE.prepare (query) .asSingleEntity
+    val query = OFY.query (classOf[DoctorRating]) .ancestor (doctor)
+    query.filter ("user", userId)
+    val rating = query.get()
     if (rating ne null) rating else newRating
   }
   /** "doctorFirstName" and "doctorLastName" fields should be preserved thru the forms

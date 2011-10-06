@@ -3,15 +3,13 @@ package grond.htmlunit
 import scala.collection.mutable
 import scala.collection.JavaConversions._
 
-import com.google.appengine.api.datastore.{Query, Entity}, Query.FilterOperator.EQUAL
-import com.google.appengine.api.datastore.FetchOptions.Builder._
-
 import com.gargoylesoftware.htmlunit.{WebClient}
 import com.gargoylesoftware.htmlunit.html.{HtmlElement, HtmlPage, HtmlTable, HtmlAnchor,
   HtmlObject, HtmlOption, HtmlInput, HtmlDivision, HtmlButton}
 import com.gargoylesoftware.htmlunit.util.Cookie
 
-import grond.model.Datastore
+import grond.model.OFY
+import grond.shared.Doctor
 
 import grond.htmlunit.fun.randomAlphabeticalString
 
@@ -123,13 +121,13 @@ class UEDNL (webClient: WebClient, hostUrl: String) extends Test (webClient, hos
     assert (getDiv (page, "//div[contains(text(), '" + name2 + "')]") ne null, page.asText) // We see whose rating we edit.
     assert (getDiv (page, "//div[contains(text(), 'TYPE OF HEALTH PROFESSIONAL')]") ne null, page.asText)
 
-    val query = new Query ("Doctor")
-    query.addFilter ("country", EQUAL, "usa")
-    query.addFilter ("region", EQUAL, "Alabama")
-    query.addFilter ("city", EQUAL, city2)
-    query.addFilter ("firstName", EQUAL, name2)
-    query.addFilter ("lastName", EQUAL, surname2)
-    val count1 = Datastore.SERVICE.prepare (query) .countEntities(withChunkSize(10))
+    val query = OFY.query (classOf[Doctor])
+    query.filter ("country", "usa")
+    query.filter ("region", "Alabama")
+    query.filter ("city", city2)
+    query.filter ("firstName", name2)
+    query.filter ("lastName", surname2)
+    val count1 = query.count()
     assert (count1 > 0, "Doctor not created")
 
     // Submit an existing doctor (should produce a different message).
@@ -195,15 +193,13 @@ and prompting him to continue with the rating, reviewing and updating the data a
 
   } finally {
     for ((region, city, name, surname) <- TEMPORARY_DOCTORS) {
-      val query = new Query ("Doctor")
-      query.addFilter ("country", EQUAL, "usa")
-      query.addFilter ("region", EQUAL, region)
-      query.addFilter ("city", EQUAL, city)
-      query.addFilter ("firstName", EQUAL, name)
-      query.addFilter ("lastName", EQUAL, surname)
-      for (doctor <- grond.model.util.queryToList (query)) {
-        Datastore.SERVICE.delete (doctor.getKey)
-      }
+      val query = OFY.query (classOf[Doctor])
+      query.filter ("country", "usa")
+      query.filter ("region", region)
+      query.filter ("city", city)
+      query.filter ("firstName", name)
+      query.filter ("lastName", surname)
+      OFY.delete (query)
     }
   }
 }

@@ -3,36 +3,31 @@ import java.lang.{Long => JLong, Integer => JInteger, Double => JDouble}
 import java.{util => ju}
 import scala.collection.mutable, scala.collection.JavaConversions._
 import com.google.appengine.repackaged.org.json.{JSONObject}
-import com.google.appengine.api.datastore._
+import com.google.appengine.api.datastore.{Key, KeyFactory}
+import grond.shared.{Doctor, DoctorRating}
 
 object doctorUtil {
-  protected def fetchRatings (doctorKey: Key): (Seq[Entity], Seq[Entity]) = {
-    val query = new Query ("DoctorRating", doctorKey)
-    util.queryToList (query) .partition {case ratingEntity =>
-      val finished = ratingEntity.getProperty ("satAfter") match {case null|"" => false; case _ => true}
-      finished
-    }
+  protected def fetchRatings (doctor: Doctor): (Iterable[DoctorRating], Iterable[DoctorRating]) = {
+    val query = OFY.query (classOf[DoctorRating]) .ancestor (doctor)
+    query.partition (_ isFinished)
   }
 
   /** Recalculate the doctor's average rate, type and other rating-dependent fields. */
-  def updateFromRatings (doctorKey: Key): Unit = {
-    val (ratings, unfinishedRatings) = fetchRatings (doctorKey)
-    val doctor = Datastore.SERVICE.get (doctorKey)
+  def updateFromRatings (doctor: Doctor): Unit = {
+    val (ratings, unfinishedRatings) = fetchRatings (doctor)
 
     // Average Satisfaction
     try {
       val fmSatisfaction = new mutable.ListBuffer[Int]
       val cfsSatisfaction = new mutable.ListBuffer[Int]
       for (rating <- ratings) {
-        val problem = (rating getProperty "problem").asInstanceOf[String]
-        val satAfter = (rating getProperty "satAfter").asInstanceOf[String]
-        if (satAfter != null) {
-          val sat = Integer.parseInt (satAfter)
-          if (problem != null && sat >= 1 && sat <= 10) {
-            problem match {
+        if (rating.satAfter > 0) {
+          val sat = rating.satAfter
+          if (rating.problem != null && sat >= 1 && sat <= 10) {
+            rating.problem match {
               case "fm" => fmSatisfaction += sat
               case "cfs" => cfsSatisfaction += sat
-              case unknown => println ("calculateMedianRating: Unknown condition `" + unknown + "` in " + rating.getKey)
+              case unknown => println ("calculateMedianRating: Unknown condition `" + unknown + "` in " + rating)
             }
           }
         }
@@ -41,44 +36,35 @@ object doctorUtil {
         if (ratings.isEmpty) 0
         else ratings.sum / ratings.size
       }
-      def saveAverage (field: String, ratings: mutable.ListBuffer[Int]) = {
-        if (ratings.isEmpty) doctor.removeProperty (field)
-        else doctor.setProperty (field, calcAverage (ratings))
-      }
-      saveAverage ("_fmSatisfaction", fmSatisfaction)
-      saveAverage ("_cfsSatisfaction", cfsSatisfaction)
+      doctor._fmSatisfaction = calcAverage (fmSatisfaction)
+      doctor._cfsSatisfaction = calcAverage (cfsSatisfaction)
     } catch {case ex => ex.printStackTrace}
 
     // Type
     try {
       val typesCount = new mutable.HashMap[String, Int]
       for (rating <- ratings) {
-        val types = (rating getProperty "type").asInstanceOf[ju.List[String]]
-        if (types != null) for (ti <- types) {typesCount.update (ti, typesCount.getOrElse (ti, 0) + 1)}
+        if (rating.`type` != null) for (ti <- rating.`type`) {typesCount.update (ti, typesCount.getOrElse (ti, 0) + 1)}
       }
-      val typesByCount: ju.Collection[AnyRef] = typesCount.keys.toList.sortWith {case (a, b) =>
-        typesCount(b) < typesCount(a) || a < b} .flatMap (k => List(k, new java.lang.Integer (typesCount (k))))
-      doctor.setProperty ("_type", typesByCount)
+      doctor._type = typesCount.mapValues (new Integer (_))
     } catch {case ex => ex.printStackTrace}
 
     // Experience
     try {
-      val experienceLevels = List ("Skeptic", "Uninformed", "Learner", "Informed", "Knowledgeable", "Specialist")
-      val experience = ratings.map (_.getProperty ("experience") .asInstanceOf[String]) .filter (_ ne null)
-        .map (experienceLevels indexOf _) .filter (_ != -1)
-      if (experience.isEmpty) doctor.removeProperty ("_experience")
-      else doctor.setProperty ("_experience", experienceLevels (experience.sum / experience.size))
+      val experienceLevels = DoctorRating.experienceLevels.toList
+      val experience = ratings.map (_.experience) .filter (_ ne null) .map (experienceLevels indexOf _) .filter (_ >= 0)
+      doctor._experience = if (experience.isEmpty) null else experienceLevels (experience.sum / experience.size)
     } catch {case ex => ex.printStackTrace}
 
     // Number of reviews
-    doctor.setProperty ("_numberOfReviews", ratings.size)
+    doctor._numberOfReviews = ratings.size
 
     // Average cost
     try {
       // The ranges used in the "averageCost" might change with time.
       // In order to draw sound conclusions from the variating ranges, we sample each range with a set of fixed prices.
       val samples = Map ((300, 1), (900, 2), (1500, 3), (3600, 4), (7200, 5))
-      val ranges = ratings.map (_.getProperty ("averageCost") .asInstanceOf[String]) .filter (_ ne null)
+      val ranges = ratings.map (_.averageCost) .filter (_ ne null)
       val levels = ranges.flatMap {case range =>
         // The range has a "<N", ">N" or "N1-N2" form.
         val (begin, end) = if (range startsWith "<") (0, range.substring(1).toInt)
@@ -86,54 +72,49 @@ object doctorUtil {
           else {val hyphen = range.indexOf ('-'); (range.substring (0, hyphen) .toInt, range.substring (hyphen + 1) .toInt)}
         samples.find {case (sample, level) => begin <= sample && sample <= end} .map (_._2)
       }
-      if (levels.isEmpty) doctor.removeProperty ("_averageCostLevel")
-      else doctor.setProperty ("_averageCostLevel", levels.sum / levels.size)
+      doctor._averageCostLevel = if (levels.isEmpty) 0 else levels.sum / levels.size
     } catch {case ex => ex.printStackTrace}
 
     // Denormalized list of ratings, used to detect if the current user have rated the doctor.
-    try {
-      doctor.setProperty ("_ratings", seqAsJavaList[String] (for (rating <- ratings ++ unfinishedRatings) yield {
-        val json = new JSONObject
-        json.put ("key/id", rating.getKey().getId())
-        val crc32 = new java.util.zip.CRC32
-        crc32.update ((rating getProperty "user").asInstanceOf[String] getBytes "UTF-8")
-        json.put ("userHash", crc32.getValue) // `_ratings` is public, therefore we're hiding the user ids behind CRC32.
-        json.put ("finished", ratings contains rating)
-        json.put ("problem", (rating getProperty "problem").asInstanceOf[String])
-        json.toString
-      }))
-    } catch {case ex => ex.printStackTrace}
+//    try {
+//      doctor._ratings = seqAsJavaList[String] (for (rating <- ratings.toList ++ unfinishedRatings) yield {
+//        val json = new JSONObject
+//        json.put ("key/id", rating.id)
+//        val crc32 = new java.util.zip.CRC32
+//        crc32.update (rating.user getBytes "UTF-8")
+//        json.put ("userHash", crc32.getValue) // `_ratings` is public, therefore we're hiding the user ids behind CRC32.
+//        json.put ("finished", ratings contains rating)
+//        json.put ("problem", rating.problem)
+//        json.toString
+//      })
+//    } catch {case ex => ex.printStackTrace}
 
-    Datastore.SERVICE.put (doctor)
+    OFY.put (classOf[Doctor], doctor)
   }
 
-  def getTRPInfo (doctorKey: Key): JSONObject = {
+  def getTRPInfo (doctor: Doctor): JSONObject = {
     val json = new JSONObject
-    val (ratings, unfinishedRatings) = fetchRatings (doctorKey)
+    val (ratings, unfinishedRatings) = fetchRatings (doctor)
 
-    def percent (field: String, value: String): Unit = try {
-      val count = ratings.count (_.getProperty (field) .asInstanceOf[String] == value)
+    def percent (field: DoctorRating => String, value: String): Unit = try {
+      val count = ratings.count (field (_) == value)
       json.put (field + "Percent", 100.0 * count / ratings.size)
     } catch {case ex => ex.printStackTrace}
 
-    percent ("insurance", "Yes")
-    percent ("ripoff", "Yes")
+    percent (_.insurance, "Yes")
+    percent (_.ripoff, "Yes")
 
-    def percentSpread (field: String): Unit = try {
-      val spread = ratings.flatMap (_.getProperty (field) match {
-        case null => Nil
-        case col: ju.Collection[Any] => col // Multiple values in the field.
-        case value: String => value :: Nil // Single value.
-      }).groupBy (s => s)
+    def percentSpread (field: DoctorRating => Iterable[String]): Unit = try {
+      val spread = ratings.flatMap (field (_)).groupBy (s => s)
       val sorted = spread.map {case (value, values) => (value, values.size)} .toList.sortBy (_._2)
       val percent = sorted.flatMap {case (value, size) => List (value, 100.0 * size / ratings.size)}
       json.put (field + "PercentSpread", seqAsJavaList[Any] (percent))
     } catch {case ex => ex.printStackTrace}
 
-    percentSpread ("treatmentBreadth")
+    percentSpread (_.treatmentBreadth)
 
     try {
-      val nums = ratings.map (_.getProperty ("actLevStart") .asInstanceOf[String]) .filter (_ != null)
+      val nums = ratings.map (_.actLevStart) .filter (_ > 0)
       if (nums.size > 0) {
         val sum = nums.map (_.toInt) .sum
         json.put ("actLevStart_average", sum / nums.size)
@@ -141,18 +122,18 @@ object doctorUtil {
     } catch {case ex => ex.printStackTrace}
     
     try {
-      val average = for (field <- grond.shared.Fields.levelPrefixes; suffix <- "Before" :: "After" :: Nil; val name = field + suffix) yield {
-        val values = ratings.map (_.getProperty (name) .asInstanceOf[String]) .filter (value => value != null && value.length != 0) .map (_.toInt)
+      val average = for (field <- DoctorRating.levelPrefixes; suffix <- "Before" :: "After" :: Nil; val name = field + suffix) yield {
+        val values = ratings.map (_.levels.get (name)) .filter (_ != null) .map (_.intValue)
         (name, if (values.isEmpty) null else values.sum / values.size)
       }
       json.put ("averagePatientCondition", mapAsJavaMap (Map (average :_*)))
     } catch {case ex => ex.printStackTrace}
 
     try {
-      val averageGain = grond.shared.Fields.levelPrefixes.map {case field =>
+      val averageGain = DoctorRating.levelPrefixes.map {case field =>
         val gains = ratings.flatMap {case rating =>
-          val before = rating.getProperty (field + "Before") .asInstanceOf[String] match {case null|"" => None; case num => Some (num.toInt)}
-          val after = rating.getProperty (field + "After") .asInstanceOf[String] match {case null|"" => None; case num => Some (num.toInt)}
+          val before = rating.levels.get (field + "Before") match {case null => None; case num => Some (num.intValue)}
+          val after = rating.levels.get (field + "After") match {case null => None; case num => Some (num.intValue)}
           if (before.isDefined && after.isDefined) Some (after.get - before.get) else None
         }
         (field, if (gains.isEmpty) 0 else gains.sum / gains.size)
@@ -162,13 +143,12 @@ object doctorUtil {
 
     // XXX: Implement all-ratings calculations as a background / cron task.
 
-    lazy val allFinishedRatings = util.queryToList (new Query ("DoctorRating"))
-      .filter (_.getProperty ("satAfter") match {case null|"" => false; case _ => true})
+    lazy val allFinishedRatings = OFY.query (classOf[DoctorRating]) .filter ("satAfter >", 0) .toList
 
     try {
       // Average condition for ALL doctors.
-      val average = for (field <- grond.shared.Fields.levelPrefixes; suffix <- "Before" :: "After" :: Nil; val name = field + suffix) yield {
-        val values = allFinishedRatings.map (_.getProperty (name) .asInstanceOf[String]) .filter (value => value != null && value.length != 0) .map (_.toInt)
+      val average = for (field <- DoctorRating.levelPrefixes; suffix <- "Before" :: "After" :: Nil; val name = field + suffix) yield {
+        val values = allFinishedRatings.map (_.levels get name) .filter (_ != null) .map (_.intValue)
         (name, if (values.isEmpty) null else values.sum / values.size)
       }
       json.put ("averageAllPatientsCondition", mapAsJavaMap (Map (average :_*)))

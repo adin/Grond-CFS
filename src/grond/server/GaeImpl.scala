@@ -5,8 +5,9 @@ import scala.collection.JavaConversions._
 import com.google.appengine.api.datastore.{Entity, KeyFactory}
 import com.google.appengine.api.users.{UserServiceFactory, User}
 import com.google.appengine.repackaged.org.json.{JSONObject, JSONArray}
-import grond.model.{Rating, Doctor, Datastore, doctorUtil, doctorNameAndLocation, UserException, suggestions}
-import grond.shared.Countries
+import com.googlecode.objectify.Key
+import grond.model.{OFY, doctorUtil, doctorNameAndLocation, UserException, suggestions}
+import grond.shared.{Countries, Doctor, DoctorRating}
 
 /**
  * Main server interface (JSON and String responses which used from GWT).
@@ -102,10 +103,7 @@ class GaeImpl extends HttpServlet {
           json.put ("doctorCreated", doctorCreated)
           respond (json.toString)
           // Update the `_ratings` field in the doctor in order to show him in `getDoctorsByRating`.
-          doctorUtil.updateFromRatings (doctor.entity match {
-            case Some (doctorEntity) => doctorEntity.getKey
-            case None => KeyFactory.stringToKey (doctor.id)
-          })
+          doctorUtil.updateFromRatings (doctor)
         } catch {
           case UserException (message, kind) =>
             val json = new JSONObject
@@ -123,7 +121,7 @@ class GaeImpl extends HttpServlet {
       case "ratingUpdateList" =>
         val ratingId = request getParameter "ratingId"
         val ratingKey = KeyFactory.stringToKey (ratingId)
-        val rating = Datastore.SERVICE.get (ratingKey)
+        val rating = OFY.get (new Key[DoctorRating] (ratingKey))
         if (!ratingBelongsToUser (rating, user) && !isAdmin) throw new Exception ("Security check failed.")
         val field = request getParameter "field"
         assert (ratingOuterField (field), field)
@@ -261,15 +259,14 @@ class GaeImpl extends HttpServlet {
     field != "fmRating" && field != "cfsRating"
   }
 
-  protected def ratingBelongsToUser (rating: Entity, user: User): Boolean = {
+  protected def ratingBelongsToUser (rating: DoctorRating, user: User): Boolean = {
     assert ((user ne null) && (rating ne null))
-    val userId = rating.getProperty ("user") .asInstanceOf[String]
-    assert ((userId ne null) && userId.length != 0)
+    assert ((rating.user ne null) && rating.user.length != 0)
     val federated = user.getFederatedIdentity
     if ((federated ne null) && federated.length != 0)
-      federated == userId
+      federated == rating.user
     else
-      user.getUserId == userId
+      user.getUserId == rating.user
   }
 
   protected def ratingToJson (rating: Rating, doctor: Option[Doctor], user: User, checkAuth: Boolean): JSONObject = {

@@ -1,6 +1,6 @@
 package grond.client;
 
-import grond.shared.Fields;
+import grond.shared.DoctorRating;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -94,8 +94,7 @@ public class RatingForm {
     };
 
     final ValueChangeHandler<Object> continueWithUser = new ValueChangeHandler<Object>() {
-      @Override
-      public void onValueChange(ValueChangeEvent<Object> event) {
+      @Override public void onValueChange(ValueChangeEvent<Object> event) {
         // Reuse the rating if it is already fetched.
         if (rating != null) render.onSuccess(rating);
         else grond.getGae().getRating(ratingId, render);
@@ -106,8 +105,7 @@ public class RatingForm {
     if (grond.currentUser == null) new Timer() {
       double seconds = 0.0;
 
-      @Override
-      public void run() {
+      @Override public void run() {
         if (grond.currentUser != null) {
           continueWithUser.onValueChange(null);
           return;
@@ -269,8 +267,7 @@ public class RatingForm {
     panel.add(radioNumeric("availability", 1, 5));
 
     final Command verifier = new Command() {
-      @Override
-      public void execute() {
+      @Override public void execute() {
         if (!rating.containsKey("experience")) {
           final HTML html = new HTML(
               "<span style='color: red; font-size: larger'>Please assess the experience level! Thanks.</span>");
@@ -388,8 +385,7 @@ public class RatingForm {
     final int cellWidth = 24; /*!< Radio button cells should have an equal width. */
     final String cellWidthS = cellWidth + "px";
     final ValueChangeHandler<Boolean> buttonChangeHandler = new ValueChangeHandler<Boolean>() {
-      @Override
-      public void onValueChange(ValueChangeEvent<Boolean> event) {
+      @Override public void onValueChange(ValueChangeEvent<Boolean> event) {
         final RadioButton button = (RadioButton) event.getSource();
         ratingUpdateString(button.getName(), button.getFormValue());
       }
@@ -402,9 +398,9 @@ public class RatingForm {
       formatter.setWidth(2, i, cellWidthS);
       formatter.setWidth(2, 11 + i, cellWidthS);
       int row = 4;
-      for (final String field : Fields.levelPrefixes()) {
+      for (final String field : DoctorRating.levelPrefixes()) {
         if (i == 1) {
-          table.setHTML(row, 0, Fields.levelLabel(field));
+          table.setHTML(row, 0, DoctorRating.levelLabel(field));
 
           formatter.setWidth(2, 22, cellWidthS);
 
@@ -438,8 +434,7 @@ public class RatingForm {
     }
     // Handle cell clicks as radio button clicks.
     table.addClickHandler(new ClickHandler() {
-      @Override
-      public void onClick(final ClickEvent event) {
+      @Override public void onClick(final ClickEvent event) {
         final HTMLTable.Cell cell = table.getCellForEvent(event);
         if (cell != null) {
           final RadioButton button = buttons.get(cell.getRowIndex() + "," + cell.getCellIndex());
@@ -454,8 +449,7 @@ public class RatingForm {
     comments.setValue(rating.containsKey("patientComments") ? rating.get("patientComments").isString()
         .stringValue() : "");
     comments.addValueChangeHandler(new ValueChangeHandler<String>() {
-      @Override
-      public void onValueChange(ValueChangeEvent<String> event) {
+      @Override public void onValueChange(ValueChangeEvent<String> event) {
         ratingUpdateString("patientComments", event.getValue());
       }
     });
@@ -481,8 +475,7 @@ public class RatingForm {
     panel.add(new HTML("Thanks for taking the time to fill out the form!"));
 
     final Command verifier = new Command() {
-      @Override
-      public void execute() {
+      @Override public void execute() {
         if (!rating.containsKey("satAfter")) {
           final HTML html = new HTML(
               "<span style='color: red; font-size: larger'>Please provide the overall satisfaction!</span>");
@@ -518,8 +511,7 @@ public class RatingForm {
       final String label = valuesAndLabels[i + 1];
       final RadioButton radio = new RadioButton(field, label, true);
       radio.addValueChangeHandler(new ValueChangeHandler<Boolean>() {
-        @Override
-        public void onValueChange(ValueChangeEvent<Boolean> event) {
+        @Override public void onValueChange(ValueChangeEvent<Boolean> event) {
           ratingUpdateString(field, value);
         }
       });
@@ -555,8 +547,7 @@ public class RatingForm {
   protected Button stepButton(final String label, final int targetStep, final Command verifier) {
     final Button button = new Button(label);
     button.addClickHandler(new ClickHandler() {
-      @Override
-      public void onClick(ClickEvent event) {
+      @Override public void onClick(ClickEvent event) {
         if (verifier != null) try {
           verifier.execute();
         } catch (CommandCanceledException cancel) {
@@ -587,8 +578,7 @@ public class RatingForm {
     final TextBox textBox = new TextBox();
     textBox.setValue(haveValue != null ? haveValue.isString().stringValue() : "");
     textBox.addValueChangeHandler(new ValueChangeHandler<String>() {
-      @Override
-      public void onValueChange(ValueChangeEvent<String> event) {
+      @Override public void onValueChange(ValueChangeEvent<String> event) {
         ratingUpdateString(field, event.getValue());
       }
     });
@@ -629,8 +619,7 @@ public class RatingForm {
       }
     }
     box.addValueChangeHandler(new ValueChangeHandler<Boolean>() {
-      @Override
-      public void onValueChange(final ValueChangeEvent<Boolean> event) {
+      @Override public void onValueChange(final ValueChangeEvent<Boolean> event) {
         ratingUpdateList(field, value, event.getValue());
       }
     });

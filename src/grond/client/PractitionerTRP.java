@@ -1,6 +1,6 @@
 package grond.client;
 
-import grond.shared.Fields;
+import grond.shared.DoctorRating;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -38,8 +38,7 @@ public class PractitionerTRP {
     this.doctor = doctor;
     final PractitionerTRP self = this;
     grond.getGae().getDoctorTRP(doctorId, doctor == null, grond.new Callback<JSONObject>() {
-      @Override
-      public void onSuccess(JSONObject result) {
+      @Override public void onSuccess(JSONObject result) {
         trpInfo = result;
 
         final JSONValue freshDoctorEntity = result.get("doctor");
@@ -145,7 +144,7 @@ public class PractitionerTRP {
       if (apc != null && apc.isObject() != null) {
         final JSONObject apco = apc.isObject();
         boolean haveValues = false;
-        for (final String field : Fields.levelPrefixes()) {
+        for (final String field : DoctorRating.levelPrefixes()) {
           final JSONValue value = apco.get(field + "Before");
           if (value != null && value.isNumber() != null) {
             haveValues = true;
@@ -157,10 +156,10 @@ public class PractitionerTRP {
               + " / average for all doctors"));
           final FlexTable table = new FlexTable();
           int row = 0;
-          for (final String field : Fields.levelPrefixes()) {
+          for (final String field : DoctorRating.levelPrefixes()) {
             if (!field.equals("sat")) { // There isn't `satBefore`.
               table.setHTML(row, 0, "&nbsp;&nbsp;&nbsp;");
-              table.setHTML(row, 1, Fields.levelLabel(field));
+              table.setHTML(row, 1, DoctorRating.levelLabel(field));
               table.setHTML(row, 2, "&nbsp;&nbsp;&nbsp;");
               final JSONValue value = apco.get(field + "Before");
               if (value != null && value.isNumber() != null) {
@@ -192,10 +191,10 @@ public class PractitionerTRP {
         final FlexTable table = new FlexTable();
         final JSONObject apgo = apg.isObject();
         int row = 0;
-        for (final String field : Fields.levelPrefixes()) {
+        for (final String field : DoctorRating.levelPrefixes()) {
           if (!field.equals("sat")) { // There isn't `satBefore`.
             table.setHTML(row, 0, "&nbsp;&nbsp;&nbsp;");
-            table.setHTML(row, 1, Fields.levelLabel(field));
+            table.setHTML(row, 1, DoctorRating.levelLabel(field));
             table.setHTML(row, 2, "&nbsp;&nbsp;&nbsp;");
             final JSONValue value = apgo.get(field);
             if (value != null && value.isNumber() != null) {
@@ -224,9 +223,9 @@ public class PractitionerTRP {
     } catch (Exception ex) {
       Logger.getLogger("PractitionerTRP").log(Level.SEVERE, ex.getMessage(), ex);
     }
-    
+
     try {
-      
+
     } catch (Exception ex) {
       Logger.getLogger("PractitionerTRP").log(Level.SEVERE, ex.getMessage(), ex);
     }
