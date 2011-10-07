@@ -2,15 +2,15 @@ package grond.shared;
 
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-import javax.persistence.Embedded;
 import javax.persistence.Id;
 
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Cached;
 import com.googlecode.objectify.annotation.Parent;
+import com.googlecode.objectify.annotation.Serialized;
 import com.googlecode.objectify.annotation.Unindexed;
 
 @Cached(expirationSeconds = 3600) public class DoctorRating {
@@ -28,7 +28,7 @@ import com.googlecode.objectify.annotation.Unindexed;
   public String user;
   public String userEmail;
   /** "fm" or "cfs" */
-  @Unindexed public String problem;
+  @Unindexed public String condition;
 
   public Date lastUpdate;
 
@@ -45,7 +45,7 @@ import com.googlecode.objectify.annotation.Unindexed;
   @Unindexed public List<String> treatmentBreadth;
   @Unindexed public int actLevStart;
   @Unindexed public int actLevEnd;
-  @Unindexed @Embedded public Map<String, Integer> levels;
+  @Unindexed @Serialized public HashMap<String, Integer> levels;
 
   public static List<String> experienceLevels() {
     return Arrays.asList("Skeptic", "Uninformed", "Learner", "Informed", "Knowledgeable", "Specialist");

@@ -1,9 +1,13 @@
 package grond.client;
 
 import grond.shared.Countries.Country;
+import grond.shared.Doctor;
+import grond.shared.ServerIf;
+import grond.shared.ServerIfAsync;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.logging.Logger;
 
 import com.google.gwt.core.client.GWT;
@@ -19,6 +23,8 @@ import com.google.gwt.jsonp.client.TimeoutException;
 import com.google.gwt.regexp.shared.RegExp;
 import com.google.gwt.storage.client.Storage;
 import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.rpc.SerializationException;
+import com.google.gwt.user.client.rpc.SerializationStreamFactory;
 
 /** Success or error. */
 class GaeResponse {
@@ -189,8 +195,7 @@ public class Gae {
     gaeString(new AsyncCallback<String>() {
       final AsyncCallback<String> callback = this;
 
-      @Override
-      public void onFailure(Throwable caught) {
+      @Override public void onFailure(Throwable caught) {
         Logger.getLogger("gaeUpdate").severe(caught.toString());
         if (caught instanceof TimeoutException) {
           // See if this is a latest request for this target, and if it is, repeat it.
@@ -204,8 +209,7 @@ public class Gae {
         }
       }
 
-      @Override
-      public void onSuccess(String result) {
+      @Override public void onSuccess(String result) {
         if (result.length() != 0) Logger.getLogger("gaeUpdate").severe(result);
         // Request successfull, remove it from the queue.
         if (rpcTargetId != null) {
@@ -292,21 +296,33 @@ public class Gae {
    * The list of country doctors sorted by condition-related rating (cfsRating, fmRating).<br>
    * Note: the last element returned will be a "There's more." string if the database had more than `limit` doctors.
    */
-  public void getDoctorsByRating(final Country country, final String $region, final String condition,
-      final int limit, final AsyncCallback<JSONArray> callback) {
-    final String region = $region == null ? "" : $region;
-    final String cacheKey = "getDoctorsByRating, " + country + ", " + region + ", " + condition + ", "
-        + limit;
-    final JSONValue have = getCache(cacheKey, true);
-    if (have != null) {
-      callback.onSuccess(have.isArray());
+  @SuppressWarnings("unused") public void getDoctorsByRating(final Country country, final String $region,
+      final String condition, final int limit, final AsyncCallback<LinkedList<Doctor>> callback) {
+    if (false) {
+      final ServerIfAsync server = GWT.create(ServerIf.class);
+      server.getDoctorsByRating(country.id, $region, condition, limit, null);
     }
 
-    gaeString(new ForwardingCallback<String, JSONArray>(callback) {
+    final String region = $region == null ? "" : $region;
+    // XXX
+    //    final String cacheKey = "getDoctorsByRating, " + country + ", " + region + ", " + condition + ", "
+    //        + limit;
+    //    final JSONValue have = getCache(cacheKey, true);
+    //    if (have != null) {
+    //      callback.onSuccess(have.isArray());
+    //    }
+
+    gaeString(new ForwardingCallback<String, LinkedList<Doctor>>(callback) {
       public void onSuccess(final String doctors) {
-        final JSONArray doctorsArray = JSONParser.parseStrict(doctors).isArray();
-        cache(86400 * 7 * 2, cacheKey, doctorsArray);
-        if (have == null) recipient.onSuccess(doctorsArray);
+        final SerializationStreamFactory ssf = GWT.create(ServerIf.class);
+        try {
+          @SuppressWarnings("unchecked")
+          LinkedList<Doctor> list = (LinkedList<Doctor>) ssf.createStreamReader(doctors).readObject();
+          //XXX//cache(86400 * 7 * 2, cacheKey, doctorsArray);
+          recipient.onSuccess(list);
+        } catch (SerializationException sex) {
+          recipient.onFailure(sex);
+        }
       }
     }, "op", "getDoctorsByRating", "country", country.id, "region", region, "condition", condition, "limit",
         Integer.toString(limit));

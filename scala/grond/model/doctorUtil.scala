@@ -23,8 +23,8 @@ object doctorUtil {
       for (rating <- ratings) {
         if (rating.satAfter > 0) {
           val sat = rating.satAfter
-          if (rating.problem != null && sat >= 1 && sat <= 10) {
-            rating.problem match {
+          if (rating.condition != null && sat >= 1 && sat <= 10) {
+            rating.condition match {
               case "fm" => fmSatisfaction += sat
               case "cfs" => cfsSatisfaction += sat
               case unknown => println ("calculateMedianRating: Unknown condition `" + unknown + "` in " + rating)
@@ -46,7 +46,11 @@ object doctorUtil {
       for (rating <- ratings) {
         if (rating.`type` != null) for (ti <- rating.`type`) {typesCount.update (ti, typesCount.getOrElse (ti, 0) + 1)}
       }
-      doctor._type = typesCount.mapValues (new Integer (_))
+      val lhm = new ju.LinkedHashMap[String, java.lang.Integer]
+      for (sortedKey <- typesCount.keys.toList.sortWith {case (a, b) => typesCount(b) < typesCount(a) || a < b}) {
+        lhm.put (sortedKey, typesCount (sortedKey))
+      }
+      doctor.`type` = lhm
     } catch {case ex => ex.printStackTrace}
 
     // Experience
@@ -76,18 +80,18 @@ object doctorUtil {
     } catch {case ex => ex.printStackTrace}
 
     // Denormalized list of ratings, used to detect if the current user have rated the doctor.
-//    try {
-//      doctor._ratings = seqAsJavaList[String] (for (rating <- ratings.toList ++ unfinishedRatings) yield {
-//        val json = new JSONObject
-//        json.put ("key/id", rating.id)
-//        val crc32 = new java.util.zip.CRC32
-//        crc32.update (rating.user getBytes "UTF-8")
-//        json.put ("userHash", crc32.getValue) // `_ratings` is public, therefore we're hiding the user ids behind CRC32.
-//        json.put ("finished", ratings contains rating)
-//        json.put ("problem", rating.problem)
-//        json.toString
-//      })
-//    } catch {case ex => ex.printStackTrace}
+    try {
+      doctor.ratings = seqAsJavaList[String] (for (rating <- ratings.toList ++ unfinishedRatings) yield {
+        val json = new JSONObject
+        json.put ("id", rating.id)
+        val crc32 = new java.util.zip.CRC32
+        crc32.update (rating.user getBytes "UTF-8")
+        json.put ("userHash", crc32.getValue) // `_ratings` is public, therefore we're hiding the user ids behind CRC32.
+        json.put ("finished", ratings contains rating)
+        json.put ("condition", rating.condition)
+        json.toString
+      })
+    } catch {case ex => ex.printStackTrace}
 
     OFY.put (classOf[Doctor], doctor)
   }

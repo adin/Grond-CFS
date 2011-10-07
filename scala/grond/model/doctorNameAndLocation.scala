@@ -22,7 +22,7 @@ object doctorNameAndLocation { import doctorNameAndLocationUtility._, util._
       val (doctor, rating, isNew) = getRating (user,
         doctorFirstName = randString, doctorLastName = randString,
         country = "testCountry", region = randString, city = randString,
-        problem = if (random.nextBoolean) "cfs" else "fm")
+        condition = if (random.nextBoolean) "cfs" else "fm")
       outerDoctor = doctor
       val userRatings = findRatings (user)
       assert (userRatings.head.id == rating.id)
@@ -44,7 +44,7 @@ object doctorNameAndLocation { import doctorNameAndLocationUtility._, util._
    * Returns `true` if a new doctor entry was created. */
   def getRating (user: User,
     doctorFirstName: String, doctorLastName: String,
-    country: String, region: String, city: String, problem: String): (Doctor, DoctorRating, Boolean) = {
+    country: String, region: String, city: String, condition: String): (Doctor, DoctorRating, Boolean) = {
 
     if (user eq null) throw new UserException (
       "You are not signed in! You must sign in to submit the info.", 1)
@@ -70,13 +70,13 @@ object doctorNameAndLocation { import doctorNameAndLocationUtility._, util._
       "You haven't filled the region.", 3)
     val tCity = city.trim; if (isEmpty (tRegion)) throw new UserException (
       "You haven't filled the city.", 3)
-    val tProblem = problem; if (isEmpty (tProblem)) throw new UserException (
+    val tProblem = condition; if (isEmpty (tProblem)) throw new UserException (
       "You haven't selected the diagnosis.", 3)
 
-    val (doctor, doctorCreated) = newOrExistingDoctor (country, region, city, firstName, lastName)
+    val (doctor, doctorCreated) = newOrExistingDoctor (tCountry, tRegion, tCity, firstName, lastName)
     val rating = newOrExistingRating (doctor, user)
 
-    rating.problem = problem
+    rating.condition = condition
 
     rating.lastUpdate = new java.util.Date
 

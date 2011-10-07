@@ -2,9 +2,12 @@ package grond.client;
 
 import grond.shared.Countries;
 import grond.shared.Countries.Country;
+import grond.shared.Doctor;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.logging.Logger;
 
 import com.google.gwt.core.client.EntryPoint;
@@ -595,9 +598,9 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
     topDoctors.getElement().setId("topDoctors"); // For automatic testing.
     countries.add(topDoctors);
     topDoctors.setWidget(0, 0, new Image(ajaxLoaderHorisontal1()));
-    final Callback<JSONArray> renderDoctors = new Callback<JSONArray>() {
+    final Callback<LinkedList<Doctor>> renderDoctors = new Callback<LinkedList<Doctor>>() {
       @Override
-      public void onSuccess(final JSONArray doctors) {
+      public void onSuccess(final LinkedList<Doctor> doctors) {
         topDoctors.setHTML(0, 0, "Name of practitioner");
         topDoctors.setHTML(0, 1, "Type of practitioner<br/>(most people said...)");
         topDoctors.setHTML(0, 2, "City");
@@ -608,45 +611,35 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
         topDoctors.setHTML(0, 7, "Experience");
 
         for (int di = 0; di < doctors.size(); ++di) {
-          final JSONObject doctor = doctors.get(di).isObject();
+          final Doctor doctor = doctors.get(di);
           if (doctor == null) continue;
-          final String firstName = doctor.get("firstName").isString().stringValue();
-          final String lastName = doctor.get("lastName").isString().stringValue();
-          final Anchor name = new Anchor(firstName + " " + lastName);
-          final JSONValue doctorId = doctor.get("_id");
-          if (doctorId != null) {
-            final int id = (int) doctorId.isNumber().doubleValue();
+          final Anchor name = new Anchor(doctor.firstName + " " + doctor.lastName);
             name.addClickHandler(new ClickHandler() {
               @Override
               public void onClick(ClickEvent event) {
                 // Open the "Practitioner Treatment Review Page".
-                History.newItem("ptrp_" + id, false);
+                History.newItem("ptrp_" + doctor.id, false);
                 initCountryBox();
-                final PractitionerTRP treatmentReviewPage = new PractitionerTRP(grondSelf, countries, id,
+                final PractitionerTRP treatmentReviewPage = new PractitionerTRP(grondSelf, countries, doctor.id,
                     doctor);
                 treatmentReviewPage.addToPanel();
               }
             });
-          }
           topDoctors.setWidget(1 + di, 0, name);
 
-          final JSONValue typeObject = doctor.get("_type"); // Types sorted by count in ratings.
-          final JSONArray type = typeObject != null ? typeObject.isArray() : null;
-          if (type != null && type.size() != 0) {
-            String typeString = type.get(0).isString().stringValue();
-            //if (type.size() > 2) typeString += ", " + type.get(2).isString().stringValue();
+          final LinkedHashMap<String, Integer> typeObject = doctor.type; // Types sorted by count in ratings.
+          if (typeObject != null && typeObject.size() != 0) {
+            String typeString = typeObject.entrySet().iterator().next().getKey();
             topDoctors.setHTML(1 + di, 1, typeString);
           }
 
-          topDoctors.setHTML(1 + di, 2, doctor.get("city").isString().stringValue());
-          topDoctors.setHTML(1 + di, 3, doctor.get("region").isString().stringValue());
-          final JSONValue numberOfReviews = doctor.get("_numberOfReviews");
-          if (numberOfReviews != null) topDoctors.setHTML(1 + di, 4,
-              Integer.toString((int) numberOfReviews.isNumber().doubleValue()));
+          topDoctors.setHTML(1 + di, 2, doctor.city);
+          topDoctors.setHTML(1 + di, 3, doctor.region);
+          if (doctor._numberOfReviews > 0) topDoctors.setHTML(1 + di, 4,
+              Integer.toString(doctor._numberOfReviews));
 
-          final JSONValue averageCostLevel = doctor.get("_averageCostLevel");
-          if (averageCostLevel != null && averageCostLevel.isNumber() != null) {
-            final int acl = (int) averageCostLevel.isNumber().doubleValue();
+          if (doctor._averageCostLevel > 0) {
+            final int acl = doctor._averageCostLevel;
             final StringBuilder html = new StringBuilder();
             for (int lev = 1; lev <= 5; ++lev) {
               final String clazz = lev <= acl ? "AverageCostStrong" : "AverageCostWeak";
@@ -655,19 +648,20 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
             topDoctors.setHTML(1 + di, 5, html.toString());
           }
 
-          final JSONValue satisfaction = doctor.get("_" + condition + "Satisfaction");
-          if (satisfaction != null) topDoctors.setHTML(1 + di, 6,
-              Integer.toString((int) satisfaction.isNumber().doubleValue()));
+          // XXX
+//          final JSONValue satisfaction = doctor.get("_" + condition + "Satisfaction");
+//          if (satisfaction != null) topDoctors.setHTML(1 + di, 6,
+//              Integer.toString((int) satisfaction.isNumber().doubleValue()));
 
-          final JSONValue experience = doctor.get("_experience");
-          if (experience != null) topDoctors.setHTML(1 + di, 7, experience.isString().stringValue());
+          if (doctor._experience != null) topDoctors.setHTML(1 + di, 7, doctor._experience);
 
+          //XXX
           String rateLabel = "Rate!";
-          final JSONValue fromCurrentUser = doctor.get("_fromCurrentUser");
-          if (fromCurrentUser != null) {
-            if (fromCurrentUser.isString().stringValue() == "finished") rateLabel = "Update";
-            else rateLabel = "Finish";
-          }
+//          final JSONValue fromCurrentUser = doctor.get("_fromCurrentUser");
+//          if (fromCurrentUser != null) {
+//            if (fromCurrentUser.isString().stringValue() == "finished") rateLabel = "Update";
+//            else rateLabel = "Finish";
+//          }
           // Change the rate button label if there exists a rating for that doctor.
 
           final Button rate = new Button(rateLabel);
@@ -681,11 +675,10 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
               } else {
                 final Timer inProgress = buttonInProgressStart(rate);
                 // Get/create a rating for this doctor.
-                final String countryId = doctor.get("country").isString().stringValue();
-                getGae().nameAndLocation(countryId, doctor.get("region").isString().stringValue(),
-                    doctor.get("city").isString().stringValue(),
-                    doctor.get("firstName").isString().stringValue(),
-                    doctor.get("lastName").isString().stringValue(), condition, new Callback<JSONObject>() {
+                getGae().nameAndLocation(doctor.country, doctor.region,
+                    doctor.city,
+                    doctor.firstName,
+                    doctor.lastName, condition, new Callback<JSONObject>() {
                       @Override
                       public void onSuccess(final JSONObject result) {
                         inProgress.cancel();
@@ -697,8 +690,8 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
                           final String ratingId = result.get("ratingId").isString().stringValue();
                           assert ratingId.length() > 10 : "ratingId is too short";
                           History
-                              .newItem("rateFormIn_" + countryId + '_' + condition + '_' + ratingId, false);
-                          final RatingForm form = new RatingForm(grondSelf, countryId, condition, ratingId,
+                              .newItem("rateFormIn_" + doctor.country + '_' + condition + '_' + ratingId, false);
+                          final RatingForm form = new RatingForm(grondSelf, doctor.country, condition, ratingId,
                               countries);
                           form.rating = result;
                           form.addToPanel();

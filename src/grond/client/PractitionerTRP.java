@@ -1,5 +1,6 @@
 package grond.client;
 
+import grond.shared.Doctor;
 import grond.shared.DoctorRating;
 
 import java.util.logging.Level;
@@ -23,13 +24,13 @@ public class PractitionerTRP {
   final Grond grond;
   Panel panel;
   final long doctorId;
-  JSONObject doctor;
+  Doctor doctor;
   JSONObject trpInfo;
 
   /**
    * @param doctor Optional. The Doctor entity, if it is already available.
    */
-  PractitionerTRP(Grond grond, final Panel rootPanel, long doctorId, JSONObject doctor) {
+  PractitionerTRP(Grond grond, final Panel rootPanel, long doctorId, Doctor doctor) {
     this.grond = grond;
     this.panel = new FlowPanel();
     rootPanel.add(this.panel);
@@ -42,7 +43,7 @@ public class PractitionerTRP {
         trpInfo = result;
 
         final JSONValue freshDoctorEntity = result.get("doctor");
-        if (freshDoctorEntity != null) self.doctor = freshDoctorEntity.isObject();
+//XXX//        if (freshDoctorEntity != null) self.doctor = freshDoctorEntity.isObject();
 
         final Panel oldPanel = self.panel;
         self.panel = new FlowPanel();
@@ -60,30 +61,25 @@ public class PractitionerTRP {
       panel.add(new Image(Grond.ajaxLoaderHorisontal1()));
     } else try {
 
-      final JSONValue firstName = doctor.get("firstName");
-      final JSONValue lastName = doctor.get("lastName");
-      if (firstName != null && lastName != null) panel.add(new Label(firstName.isString().stringValue() + " "
-          + lastName.isString().stringValue()));
+      if (doctor.firstName != null && doctor.lastName != null) panel.add(new Label(doctor.firstName + " "
+          + doctor.lastName));
 
-      final JSONValue city = doctor.get("city");
-      final JSONValue region = doctor.get("region");
-      if (city != null && region != null) panel.add(new Label("Location - " + city.isString().stringValue()
-          + "/" + region.isString().stringValue()));
+      if (doctor.city != null && doctor.region != null) panel.add(new Label("Location - " + doctor.city
+          + "/" + doctor.region));
 
       final StringBuilder sb = new StringBuilder();
-      final JSONValue type = doctor.get("_type");
-      if (type != null) {
-        final JSONArray typea = type.isArray();
-        if (typea != null) for (int n = 0; n < typea.size(); n += 2) {
-          sb.append(typea.get(n).isString().stringValue());
-          if (n + 2 < typea.size()) sb.append("; ");
-        }
-        panel.add(new Label("Type - " + sb.toString()));
+      if (doctor.type != null) {
+// XXX
+//        final JSONArray typea = type.isArray();
+//        if (typea != null) for (int n = 0; n < typea.size(); n += 2) {
+//          sb.append(typea.get(n).isString().stringValue());
+//          if (n + 2 < typea.size()) sb.append("; ");
+//        }
+//        panel.add(new Label("Type - " + sb.toString()));
       }
 
-      final JSONValue experience = doctor.get("_experience");
-      if (experience != null) panel.add(new Label("Average Rated Experience Level - "
-          + experience.isString().stringValue()));
+      if (doctor._experience != null) panel.add(new Label("Average Rated Experience Level - "
+          + doctor._experience));
 
     } catch (Exception ex) {
       Logger.getLogger("PractitionerTRP").log(Level.SEVERE, ex.getMessage(), ex);

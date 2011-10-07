@@ -1,11 +1,12 @@
 package grond.shared;
 
-import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.List;
 
-import javax.persistence.Embedded;
 import javax.persistence.Id;
 
 import com.googlecode.objectify.annotation.Cached;
+import com.googlecode.objectify.annotation.Serialized;
 import com.googlecode.objectify.annotation.Unindexed;
 
 @Cached(expirationSeconds = 3600) public class Doctor {
@@ -23,8 +24,10 @@ import com.googlecode.objectify.annotation.Unindexed;
   @Unindexed public String _experience;
   public int _numberOfReviews;
   @Unindexed public int _averageCostLevel;
-  /** Denormalized list of ratings, used to detect if the current user have rated the doctor. JSON. */
-  //NOT USED?//@Unindexed public List<String> _ratings;
+  /** Denormalized list of ratings, used to detect if the current user have rated the doctor.<br>
+   * Values are JSON-encoded.<br>
+   * See `ServerImpl.getDoctorsByRating`. */
+  @Unindexed public List<String> ratings;
 
-  @Unindexed @Embedded public Map<String, Integer> _type;
+  @Unindexed @Serialized public LinkedHashMap<String, Integer> type;
 }

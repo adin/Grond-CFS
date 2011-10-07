@@ -1,8 +1,11 @@
 package grond
 import java.{util => ju}
 import com.googlecode.objectify.{ObjectifyService, ObjectifyFactory, ObjectifyOpts, Objectify}
+import grond.shared.{Doctor, DoctorRating}
 
 package object model {
+  ObjectifyService.register (classOf[Doctor])
+  ObjectifyService.register (classOf[DoctorRating])
   def OFY = ObjectifyService.begin()
 
   /** Used to check for parameters. */
