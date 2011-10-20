@@ -1,5 +1,6 @@
 package grond.shared;
 
+import java.io.Serializable;
 import java.util.LinkedHashMap;
 import java.util.List;
 
@@ -9,8 +10,10 @@ import com.googlecode.objectify.annotation.Cached;
 import com.googlecode.objectify.annotation.Serialized;
 import com.googlecode.objectify.annotation.Unindexed;
 
-@Cached(expirationSeconds = 3600) public class Doctor {
-  @Id public long id;
+@Cached(expirationSeconds = 3600) public class Doctor implements Serializable {
+  private static final long serialVersionUID = 1L;
+
+  @Id public Long id;
 
   public String country;
   public String region;

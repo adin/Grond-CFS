@@ -2,8 +2,10 @@ package grond.client;
 
 import grond.shared.Countries.Country;
 import grond.shared.Doctor;
+import grond.shared.DoctorRating;
 import grond.shared.ServerIf;
 import grond.shared.ServerIfAsync;
+import grond.shared.UserException;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -43,6 +45,8 @@ public class Gae {
   protected final HashMap<String, String[]> gaeRequests;
   protected final Storage localStorage = Storage.getLocalStorageIfSupported();
   protected JSONObject localCache;
+  public boolean USE_GWT_RPC = false;
+  final SerializationStreamFactory SSF = GWT.create(ServerIf.class);
 
   public Gae(final Grond grond, final HashMap<String, String[]> gaeRequests) {
     this.grond = grond;
@@ -242,6 +246,7 @@ public class Gae {
         "federatedIdentity", federatedIdentity);
   }
 
+  // XXX Probably should delete this method when migration to Objectify is complete.
   protected void stringToObject(final String jsonString, final AsyncCallback<JSONObject> callback) {
     final JSONValue json = JSONParser.parseStrict(jsonString);
     final JSONString asString = json.isString();
@@ -258,22 +263,42 @@ public class Gae {
    * Also 'doctorCreated' boolean is true if the doctor was created (false if existing doctor found).<br>
    * Returns an 'errorMessage' string if there was an error. */
   public void nameAndLocation(final String countryId, final String region, final String city,
-      final String name, final String surname, final String problem, final AsyncCallback<JSONObject> callback) {
-    gaeString(new ForwardingCallback<String, JSONObject>(callback) {
-      public void onSuccess(String ratingOp) {
-        stringToObject(ratingOp, callback);
+      final String name, final String surname, final String problem,
+      final AsyncCallback<DoctorRating> callback) {
+    if (USE_GWT_RPC) {
+      final ServerIfAsync server = GWT.create(ServerIf.class);
+      server.nameAndLocation(countryId, region, city, name, surname, problem, callback);
+      return;
+    }
+    gaeString(new ForwardingCallback<String, DoctorRating>(callback) {
+      public void onSuccess(String ratingStr) {
+        try {
+          Object obj = SSF.createStreamReader(ratingStr).readObject();
+          if (obj instanceof UserException) callback.onFailure((UserException) obj);
+          else if (obj instanceof DoctorRating) callback.onSuccess((DoctorRating) obj);
+          else callback.onFailure(new Exception("Unknown object: " + obj.getClass()));
+        } catch (SerializationException sex) {
+          callback.onFailure(sex);
+        }
       }
     }, "countryId", countryId, "region", region, "city", city, "name", name, "surname", surname, "problem",
         problem, "op", "nameAndLocation");
   }
 
   /** Rating values. Also rating id in a 'ratingId' string and doctor values in a 'doctor' object. */
-  public void getRating(final String ratingId, final AsyncCallback<JSONObject> callback) {
-    gaeString(new ForwardingCallback<String, JSONObject>(callback) {
-      public void onSuccess(String rating) {
-        stringToObject(rating, callback);
-      }
-    }, "ratingId", ratingId, "op", "getRating");
+  public void getRating(final String ratingId, final AsyncCallback<DoctorRating> callback) {
+    boolean delme = true; // XXX
+    if (delme || USE_GWT_RPC) {
+      final ServerIfAsync server = GWT.create(ServerIf.class);
+      server.getRating(ratingId, callback);
+      return;
+    }
+// XXX
+//    gaeString(new ForwardingCallback<String, JSONObject>(callback) {
+//      public void onSuccess(String rating) {
+//        stringToObject(rating, callback);
+//      }
+//    }, "ratingId", ratingId, "op", "getRating");
   }
 
   /** Update a list value (for example, a group of checkboxes) in the rating. */
@@ -296,11 +321,12 @@ public class Gae {
    * The list of country doctors sorted by condition-related rating (cfsRating, fmRating).<br>
    * Note: the last element returned will be a "There's more." string if the database had more than `limit` doctors.
    */
-  @SuppressWarnings("unused") public void getDoctorsByRating(final Country country, final String $region,
-      final String condition, final int limit, final AsyncCallback<LinkedList<Doctor>> callback) {
-    if (false) {
+  public void getDoctorsByRating(final Country country, final String $region, final String condition,
+      final int limit, final AsyncCallback<LinkedList<Doctor>> callback) {
+    if (USE_GWT_RPC) {
       final ServerIfAsync server = GWT.create(ServerIf.class);
-      server.getDoctorsByRating(country.id, $region, condition, limit, null);
+      server.getDoctorsByRating(country.id, $region, condition, limit, callback);
+      return;
     }
 
     final String region = $region == null ? "" : $region;
@@ -314,10 +340,9 @@ public class Gae {
 
     gaeString(new ForwardingCallback<String, LinkedList<Doctor>>(callback) {
       public void onSuccess(final String doctors) {
-        final SerializationStreamFactory ssf = GWT.create(ServerIf.class);
         try {
           @SuppressWarnings("unchecked")
-          LinkedList<Doctor> list = (LinkedList<Doctor>) ssf.createStreamReader(doctors).readObject();
+          LinkedList<Doctor> list = (LinkedList<Doctor>) SSF.createStreamReader(doctors).readObject();
           //XXX//cache(86400 * 7 * 2, cacheKey, doctorsArray);
           recipient.onSuccess(list);
         } catch (SerializationException sex) {

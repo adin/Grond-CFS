@@ -5,7 +5,7 @@ import javax.jdo.PersistenceManager
 import scala.collection.JavaConversions._
 import com.google.appengine.api.users.{UserServiceFactory, User}
 import com.googlecode.objectify.{Query, Key}
-import grond.shared.{Countries, Doctor, DoctorRating}
+import grond.shared.{Countries, Doctor, DoctorRating, UserException}
 import grond.htmlunit.fun.randomAlphabeticalString
 
 /**
@@ -148,7 +148,7 @@ object doctorNameAndLocationUtility {
       doctor.city = city;
       doctor.firstName = firstName;
       doctor.lastName = lastName;
-      OFY.put (classOf[Doctor], doctor)
+      OFY.put[Doctor] (doctor)
       println ("doctorNameAndLocation; new doctor: " + doctor)
       (doctor, true)
     }

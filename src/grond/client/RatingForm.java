@@ -2,6 +2,7 @@ package grond.client;
 
 import grond.shared.DoctorRating;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -12,15 +13,12 @@ import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.event.logical.shared.ValueChangeEvent;
 import com.google.gwt.event.logical.shared.ValueChangeHandler;
-import com.google.gwt.json.client.JSONArray;
-import com.google.gwt.json.client.JSONObject;
-import com.google.gwt.json.client.JSONString;
-import com.google.gwt.json.client.JSONValue;
 import com.google.gwt.user.client.Command;
 import com.google.gwt.user.client.CommandCanceledException;
 import com.google.gwt.user.client.History;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.CheckBox;
 import com.google.gwt.user.client.ui.FlexTable;
@@ -45,7 +43,7 @@ public class RatingForm {
   final String ratingId;
   final Panel panel;
   /** If you have the rating, set it there to save us from the RPC roundtrip. */
-  public JSONObject rating;
+  public DoctorRating rating;
   int step = 1;
 
   RatingForm(Grond grond, String countryId, String condition, String ratingId, Panel rootPanel) {
@@ -62,9 +60,13 @@ public class RatingForm {
     if (rating == null) doctorInfo.setHTML("<img src='" + Grond.ajaxLoaderHorisontal1() + "' />");
     panel.add(doctorInfo);
 
-    final Grond.Callback<JSONObject> render = grond.new Callback<JSONObject>() {
-      public void onSuccess(final JSONObject $rating) {
-        assert (ratingId.equals($rating.get("ratingId").isString().stringValue()));
+    final AsyncCallback<DoctorRating> render = new AsyncCallback<DoctorRating>() {
+      public void onFailure(Throwable cause) {
+        Window.alert(cause.toString());
+      }
+
+      public void onSuccess(final DoctorRating $rating) {
+        assert ($rating.getFullId().equals(ratingId));
         rating = $rating;
 
         // Security check: signed in user should be the same as the rating's owner.
@@ -72,16 +74,16 @@ public class RatingForm {
           doctorInfo.setHTML("Please sign in.");
           throw new RuntimeException("Not signed in.");
         }
-        final String ratingUser = rating.get("user").isString().stringValue();
         final String gaeUser = grond.currentUser.getId();
-        if (gaeUser == null || !gaeUser.equals(ratingUser)) {
+        if (gaeUser == null || !gaeUser.equals(rating.user)) {
           doctorInfo.setHTML("Internal error: This rating belongs to a different user."
               + " Make sure you are signed in properly.");
-          throw new RuntimeException("Expected user: " + ratingUser + "; got: " + gaeUser);
+          throw new RuntimeException("Expected user: " + rating.user + "; got: " + gaeUser);
         }
 
-        final String name = rating.get("doctor").isObject().get("firstName").isString().stringValue();
-        final String surname = rating.get("doctor").isObject().get("lastName").isString().stringValue();
+        assert (rating._doctor != null);
+        final String name = rating._doctor.firstName;
+        final String surname = rating._doctor.lastName;
         doctorInfo.setHTML("Rating of: " + name + ' ' + surname + ".");
 
         if (step == 1) firstStep();
@@ -128,7 +130,7 @@ public class RatingForm {
     // Save condition into the rating.
     if (!condition.equals("fm") && !condition.equals("cfs")) throw new RuntimeException("Unknown condition: "
         + condition);
-    if (!rating.containsKey("problem")) ratingUpdateString("problem", condition);
+    if (rating.condition == null || rating.condition.length() == 0) ratingUpdateString("condition", condition);
 
     panel.add(new HTML("TYPE OF HEALTH PROFESSIONAL"));
     panel.add(ratingBox("type", "Family Physician / Internist",
@@ -268,7 +270,7 @@ public class RatingForm {
 
     final Command verifier = new Command() {
       @Override public void execute() {
-        if (!rating.containsKey("experience")) {
+        if (rating.getField("experience") == null) {
           final HTML html = new HTML(
               "<span style='color: red; font-size: larger'>Please assess the experience level! Thanks.</span>");
           panel.add(html);
@@ -406,7 +408,7 @@ public class RatingForm {
 
           final RadioButton naButton = new RadioButton(field + "After");
           naButton.setFormValue("-1");
-          naButton.setValue(new JSONString(naButton.getFormValue()).equals(rating.get(naButton.getName())));
+          naButton.setValue(naButton.getFormValue().equals(rating.getField(naButton.getName())));
           table.setWidget(row, 22, naButton);
           naButton.addValueChangeHandler(buttonChangeHandler);
           buttons.put(row + ",22", naButton);
@@ -415,7 +417,7 @@ public class RatingForm {
         if (!field.equals("sat")) {
           final RadioButton button = new RadioButton(field + "Before");
           button.setFormValue(Integer.toString(i));
-          button.setValue(new JSONString(button.getFormValue()).equals(rating.get(button.getName())));
+          button.setValue(button.getFormValue().equals(rating.getField(button.getName())));
           table.setWidget(row, i, button);
           button.addValueChangeHandler(buttonChangeHandler);
           buttons.put(row + "," + i, button);
@@ -423,7 +425,7 @@ public class RatingForm {
         }
         final RadioButton button = new RadioButton(field + "After");
         button.setFormValue(Integer.toString(i));
-        button.setValue(new JSONString(button.getFormValue()).equals(rating.get(button.getName())));
+        button.setValue(button.getFormValue().equals(rating.getField(button.getName())));
         table.setWidget(row, 11 + i, button);
         button.addValueChangeHandler(buttonChangeHandler);
         buttons.put(row + "," + (11 + i), button);
@@ -446,8 +448,8 @@ public class RatingForm {
 
     panel.add(h2(new HTML("Comments")));
     final TextArea comments = new TextArea();
-    comments.setValue(rating.containsKey("patientComments") ? rating.get("patientComments").isString()
-        .stringValue() : "");
+    comments.setValue(rating.getField("patientComments") != null ? (String) rating
+        .getField("patientComments") : "");
     comments.addValueChangeHandler(new ValueChangeHandler<String>() {
       @Override public void onValueChange(ValueChangeEvent<String> event) {
         ratingUpdateString("patientComments", event.getValue());
@@ -476,7 +478,7 @@ public class RatingForm {
 
     final Command verifier = new Command() {
       @Override public void execute() {
-        if (!rating.containsKey("satAfter")) {
+        if (rating.getField("satAfter") != null) {
           final HTML html = new HTML(
               "<span style='color: red; font-size: larger'>Please provide the overall satisfaction!</span>");
           panel.add(html);
@@ -503,7 +505,7 @@ public class RatingForm {
 
   protected Panel radioInput(final String field, final String defaultValue, final String sep,
       final String... valuesAndLabels) {
-    final String haveValue = rating.containsKey(field) ? rating.get(field).isString().stringValue() : null;
+    final String haveValue = (String) rating.getField(field);
 
     final FlowPanel panel = new FlowPanel();
     for (int i = 0; i < valuesAndLabels.length; i += 2) {
@@ -565,7 +567,7 @@ public class RatingForm {
 
   protected void ratingUpdateString(final String field, String value) {
     if (value == null) value = "";
-    rating.put(field, new JSONString(value));
+    rating.setField(field, value);
     if (value.length() == 0) grond.getGae().ratingRemove(ratingId, field);
     else grond.getGae().ratingUpdateString(ratingId, field, value);
 
@@ -574,9 +576,9 @@ public class RatingForm {
   }
 
   protected TextBox textInput(final String field) {
-    final JSONValue haveValue = rating.get(field);
+    final String haveValue = (String) rating.getField(field);
     final TextBox textBox = new TextBox();
-    textBox.setValue(haveValue != null ? haveValue.isString().stringValue() : "");
+    textBox.setValue(haveValue != null ? haveValue : "");
     textBox.addValueChangeHandler(new ValueChangeHandler<String>() {
       @Override public void onValueChange(ValueChangeEvent<String> event) {
         ratingUpdateString(field, event.getValue());
@@ -588,16 +590,18 @@ public class RatingForm {
   /** Update local AND remote copies of the rating. */
   protected void ratingUpdateList(final String field, final String value, final boolean add) {
     // Update the local copy of the rating.
-    final JSONArray values = rating.containsKey(field) ? rating.get(field).isArray() : new JSONArray();
+    @SuppressWarnings("unchecked")
+    ArrayList<String> values = (ArrayList<String>) rating.getField(field);
+    if (values == null) values = new ArrayList<String>();
     boolean valueAlreadySet = false;
     for (int i = 0; i < values.size(); ++i) {
-      if (values.get(i) != null && value.equals(values.get(i).isString().stringValue())) {
+      if (values.get(i) != null && value.equals(values.get(i))) {
         if (add) valueAlreadySet = true;
-        else values.set(i, null);
+        else values.remove(i--);
       }
     }
-    if (!valueAlreadySet && add) values.set(values.size(), new JSONString(value));
-    rating.put(field, values);
+    if (!valueAlreadySet && add) values.add(value);
+    rating.setField(field, values);
 
     // Update the server copy.
     grond.getGae().ratingUpdateList(ratingId, field, value, add);
@@ -609,10 +613,11 @@ public class RatingForm {
     final CheckBox box = new CheckBox(label);
     // See if the box is checked in the rating.
     assert (rating != null);
-    if (rating.containsKey(field)) {
-      final JSONArray values = rating.get(field).isArray();
+    if (rating.getField(field) != null) {
+      @SuppressWarnings("unchecked")
+      final ArrayList<String> values = (ArrayList<String>) rating.getField(field);
       for (int i = 0; i < values.size(); ++i) {
-        if (values.get(0) != null && value.equals(values.get(i).isString().stringValue())) {
+        if (values.get(0) != null && value.equals(values.get(i))) {
           box.setValue(true);
           break;
         }

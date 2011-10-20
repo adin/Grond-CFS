@@ -3,6 +3,8 @@ import java.{util => ju}
 import javax.servlet.http.HttpServletRequest
 import com.google.appengine.api.users.{UserServiceFactory, User}
 import com.google.gwt.user.server.rpc.SerializationPolicyLoader
+import com.googlecode.objectify.Key
+import grond.shared.{Doctor, DoctorRating, UserException}
 
 package object server {
   /** Retrieve either the real user or the mock user for the unit tests. */
@@ -26,11 +28,31 @@ package object server {
   protected[server] def userHash (userId: String) =
     {val crc32 = new java.util.zip.CRC32; crc32.update (userId getBytes "UTF-8"); crc32.getValue}
 
-  // NB: Should manually copy the fresh serialization policy
-  // from the GWT-generated /war/grond/*.gwt.rpc to /src/gwt.rpc.
+  // Security helper.
+  protected[server] def ratingBelongsToUser (rating: DoctorRating, user: User): Boolean = {
+    assert ((user ne null) && (rating ne null))
+    assert ((rating.user ne null) && rating.user.length != 0)
+    val federated = user.getFederatedIdentity
+    if ((federated ne null) && federated.length != 0)
+      federated == rating.user
+    else
+      user.getUserId == rating.user
+  }
+
+  /** See `DoctorRating.getFullId`. */
+  protected[server] def ratingIdToKey (ratingId: String): Key[DoctorRating] = {
+    assert ((ratingId ne null) && ratingId.length != 0)
+    val dot = ratingId.indexOf ('.')
+    if (dot < 1) throw new UserException ("No dot in ratingId", 1)
+    val doctorId = java.lang.Long.parseLong (ratingId.substring (0, dot))
+    val doctorKey = new Key (classOf[Doctor], doctorId)
+    val ratingLId = java.lang.Long.parseLong (ratingId.substring (dot + 1))
+    new Key (doctorKey, classOf[DoctorRating], ratingLId)
+  }
+
+  // NB: Fresh serialization policy is copied by /scala/makefile
+  // from the GWT-generated /war/grond/*.gwt.rpc to /bin/gwt.rpc.
   // CF: http://www.techhui.com/profiles/blogs/simpler-and-speedier-gwt-with
-  // TODO: (See if it is possible to) Automatically find the GWT version of *.gwt.rpc at runtime.
-  //       (or if it is possible to update the /src/gwt.rpc at compile time, perhaps with a makefile).
   protected[server] lazy val GWT_SERIALIZATION_POLICY = {
     val cfe = new ju.LinkedList[ClassNotFoundException]
     val policy = SerializationPolicyLoader.loadFromStream (getClass.getResourceAsStream ("/gwt.rpc"), cfe)

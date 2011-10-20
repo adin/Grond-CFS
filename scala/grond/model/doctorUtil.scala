@@ -93,7 +93,7 @@ object doctorUtil {
       })
     } catch {case ex => ex.printStackTrace}
 
-    OFY.put (classOf[Doctor], doctor)
+    OFY.put[Doctor] (doctor)
   }
 
   def getTRPInfo (doctor: Doctor): JSONObject = {

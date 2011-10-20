@@ -9,6 +9,10 @@
 		<servlet-name>gaeServlet</servlet-name>
 		<servlet-class>grond.server.GaeImpl</servlet-class>
 	</servlet>
+    <servlet>
+        <servlet-name>nativeGaeServlet</servlet-name>
+        <servlet-class>grond.server.ServerImpl</servlet-class>
+    </servlet>
 	<servlet>
 		<servlet-name>testsServlet</servlet-name>
 		<servlet-class>grond.server.GaeTestsImpl</servlet-class>
@@ -18,6 +22,10 @@
 		<servlet-name>gaeServlet</servlet-name>
 		<url-pattern>/grond/gae</url-pattern>
 	</servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>nativeGaeServlet</servlet-name>
+        <url-pattern>/grond/nativeGae</url-pattern>
+    </servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>testsServlet</servlet-name>
 		<url-pattern>/grond/tests</url-pattern>

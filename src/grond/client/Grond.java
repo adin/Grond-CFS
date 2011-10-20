@@ -3,6 +3,7 @@ package grond.client;
 import grond.shared.Countries;
 import grond.shared.Countries.Country;
 import grond.shared.Doctor;
+import grond.shared.DoctorRating;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -27,7 +28,6 @@ import com.google.gwt.event.logical.shared.ValueChangeEvent;
 import com.google.gwt.event.logical.shared.ValueChangeHandler;
 import com.google.gwt.json.client.JSONArray;
 import com.google.gwt.json.client.JSONObject;
-import com.google.gwt.json.client.JSONValue;
 import com.google.gwt.user.client.History;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.Window;
@@ -161,8 +161,7 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
         // Wait a bit before displaying the notification.
         double pendingSeconds = 0.0;
 
-        @Override
-        public void run() {
+        @Override public void run() {
           if (gaeRequests == null || gaeRequests.isEmpty()) {
             pendingSeconds = 0.0;
             if (updatesPanel.getWidgetCount() != 1 || updatesPanel.getWidget(0) != updatesFiller) {
@@ -312,14 +311,12 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
     final MultiWordSuggestOracle nameOracle = new MultiWordSuggestOracle();
     final SuggestBox city = new SuggestBox(cityOracle);
     final ChangeHandler regionSuggestionsHandler = new ChangeHandler() {
-      @Override
-      public void onChange(final ChangeEvent event) {
+      @Override public void onChange(final ChangeEvent event) {
         city.setValue("");
 
         final String region = REGION.getItemText(REGION.getSelectedIndex());
         getGae().getDoctorSuggestions(region, null, new Callback<JSONObject>() {
-          @Override
-          public void onSuccess(final JSONObject suggestions) {
+          @Override public void onSuccess(final JSONObject suggestions) {
             final JSONArray cities = suggestions.get("cities").isArray();
             cityOracle.clear();
             for (int index = 0; index < cities.size(); ++index)
@@ -342,8 +339,7 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
     final SuggestBox name = new SuggestBox(nameOracle);
     final SuggestBox surname = new SuggestBox(nameOracle);
     final SelectionHandler<Suggestion> nameSuggestionHandler = new SelectionHandler<Suggestion>() {
-      @Override
-      public void onSelection(final SelectionEvent<Suggestion> event) {
+      @Override public void onSelection(final SelectionEvent<Suggestion> event) {
         final String selected = event.getSelectedItem().getReplacementString();
         final int space = selected.indexOf(' ');
         final int comma = selected.indexOf(',');
@@ -403,31 +399,30 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
 
         // Send doctor information to the server.
         getGae().nameAndLocation(countryId, region, city.getValue(), name.getValue(), surname.getValue(),
-            condition, new Callback<JSONObject>() {
-              public void onSuccess(JSONObject result) {
-                if (result.containsKey("errorMessage")) {
-                  final String message = result.get("errorMessage").isString().stringValue();
-                  errorMessage.setHTML(message);
-                  Window.alert(message);
-                } else {
-                  final String ratingId = result.get("ratingId").isString().stringValue();
-                  assert ratingId.length() > 10 : "ratingId is too short";
-                  root.clear();
-                  final boolean doctorCreated = result.get("doctorCreated").isBoolean().booleanValue();
-                  if (doctorCreated) {
-                    root.add(new Label("Thanks for telling us about this practitioner!"));
-                  } else {
-                    root.add(new Label("This practicioner is withing our database."
-                        + " Please go on with your rating!"));
-                  }
-                  History.newItem("rateFormIn_" + countryId + '_' + condition + '_' + ratingId, false);
-                  final RatingForm form = new RatingForm(grondSelf, countryId, condition, ratingId, root);
-                  form.rating = result;
-                  form.addToPanel();
+            condition, new AsyncCallback<DoctorRating>() {
+              public void onFailure(Throwable caught) {
+                errorMessage.setHTML(caught.getMessage());
+                Window.alert(caught.getMessage());
+              }
 
-                  // Refresh the doctor's list.
-                  getGae().cleanCache("^getDoctorsByRating");
-                }
+              public void onSuccess(final DoctorRating rating) {
+                root.clear();
+                // XXX Pass `doctorCreated` via DoctorRating?
+                //final boolean doctorCreated = result.get("doctorCreated").isBoolean().booleanValue();
+                //if (doctorCreated) {
+                //  root.add(new Label("Thanks for telling us about this practitioner!"));
+                //} else {
+                //  root.add(new Label("This practicioner is withing our database."
+                //      + " Please go on with your rating!"));
+                //}
+                final String ratingId = rating.getFullId();
+                History.newItem("rateFormIn_" + countryId + '_' + condition + '_' + ratingId, false);
+                final RatingForm form = new RatingForm(grondSelf, countryId, condition, ratingId, root);
+                form.rating = rating;
+                form.addToPanel();
+
+                // Refresh the doctor's list.
+                getGae().cleanCache("^getDoctorsByRating");
               }
             });
       }
@@ -562,8 +557,7 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
       final String originalLabel = button.getHTML();
       int counter = 0;
 
-      @Override
-      public void run() {
+      @Override public void run() {
         if (button.isEnabled()) {
           // Restore the label after this timer is cancelled. See `buttonInProgressEnd`.
           button.setHTML(originalLabel);
@@ -599,8 +593,7 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
     countries.add(topDoctors);
     topDoctors.setWidget(0, 0, new Image(ajaxLoaderHorisontal1()));
     final Callback<LinkedList<Doctor>> renderDoctors = new Callback<LinkedList<Doctor>>() {
-      @Override
-      public void onSuccess(final LinkedList<Doctor> doctors) {
+      @Override public void onSuccess(final LinkedList<Doctor> doctors) {
         topDoctors.setHTML(0, 0, "Name of practitioner");
         topDoctors.setHTML(0, 1, "Type of practitioner<br/>(most people said...)");
         topDoctors.setHTML(0, 2, "City");
@@ -614,17 +607,16 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
           final Doctor doctor = doctors.get(di);
           if (doctor == null) continue;
           final Anchor name = new Anchor(doctor.firstName + " " + doctor.lastName);
-            name.addClickHandler(new ClickHandler() {
-              @Override
-              public void onClick(ClickEvent event) {
-                // Open the "Practitioner Treatment Review Page".
-                History.newItem("ptrp_" + doctor.id, false);
-                initCountryBox();
-                final PractitionerTRP treatmentReviewPage = new PractitionerTRP(grondSelf, countries, doctor.id,
-                    doctor);
-                treatmentReviewPage.addToPanel();
-              }
-            });
+          name.addClickHandler(new ClickHandler() {
+            @Override public void onClick(ClickEvent event) {
+              // Open the "Practitioner Treatment Review Page".
+              History.newItem("ptrp_" + doctor.id, false);
+              initCountryBox();
+              final PractitionerTRP treatmentReviewPage = new PractitionerTRP(grondSelf, countries,
+                  doctor.id, doctor);
+              treatmentReviewPage.addToPanel();
+            }
+          });
           topDoctors.setWidget(1 + di, 0, name);
 
           final LinkedHashMap<String, Integer> typeObject = doctor.type; // Types sorted by count in ratings.
@@ -667,35 +659,29 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
           final Button rate = new Button(rateLabel);
           final int currentRow = 1 + di;
           rate.addClickHandler(new ClickHandler() {
-            @Override
-            public void onClick(final ClickEvent event) {
+            @Override public void onClick(final ClickEvent event) {
               if (currentUser == null) {
                 rate.setEnabled(false);
                 topDoctors.setWidget(currentRow, 4, loginForm());
               } else {
                 final Timer inProgress = buttonInProgressStart(rate);
                 // Get/create a rating for this doctor.
-                getGae().nameAndLocation(doctor.country, doctor.region,
-                    doctor.city,
-                    doctor.firstName,
-                    doctor.lastName, condition, new Callback<JSONObject>() {
-                      @Override
-                      public void onSuccess(final JSONObject result) {
+                getGae().nameAndLocation(doctor.country, doctor.region, doctor.city, doctor.firstName,
+                    doctor.lastName, condition, new AsyncCallback<DoctorRating>() {
+                      public void onFailure(Throwable cause) {
+                        Window.alert(cause.getMessage());
+                      }
+
+                      @Override public void onSuccess(final DoctorRating rating) {
                         inProgress.cancel();
-                        if (result.containsKey("errorMessage")) {
-                          final String message = result.get("errorMessage").isString().stringValue();
-                          Window.alert(message);
-                        } else {
-                          initCountryBox();
-                          final String ratingId = result.get("ratingId").isString().stringValue();
-                          assert ratingId.length() > 10 : "ratingId is too short";
-                          History
-                              .newItem("rateFormIn_" + doctor.country + '_' + condition + '_' + ratingId, false);
-                          final RatingForm form = new RatingForm(grondSelf, doctor.country, condition, ratingId,
-                              countries);
-                          form.rating = result;
-                          form.addToPanel();
-                        }
+                        initCountryBox();
+                        final String ratingId = rating.getFullId();
+                        History.newItem("rateFormIn_" + doctor.country + '_' + condition + '_' + ratingId,
+                            false);
+                        final RatingForm form = new RatingForm(grondSelf, doctor.country, condition,
+                            ratingId, countries);
+                        form.rating = rating;
+                        form.addToPanel();
                       }
                     });
               }

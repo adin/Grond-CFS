@@ -7,8 +7,8 @@ import com.google.appengine.api.users.{UserServiceFactory, User}
 import com.google.appengine.repackaged.org.json.{JSONObject, JSONArray}
 import com.google.gwt.user.server.rpc.RPC
 import com.googlecode.objectify.Key
-import grond.model.{OFY, doctorUtil, doctorNameAndLocation, UserException, suggestions}
-import grond.shared.{Countries, Doctor, DoctorRating}
+import grond.model.{OFY, doctorUtil, doctorNameAndLocation, suggestions}
+import grond.shared.{Countries, Doctor, DoctorRating, UserException}
 
 /**
  * Main server interface (JSON and String responses which used from GWT).
@@ -76,92 +76,79 @@ class GaeImpl extends HttpServlet {
         val name = request getParameter "name"
         val surname = request getParameter "surname"
         val problem = request getParameter "problem"
+        val method = classOf[ServerImpl].getMethod ("nameAndLocation",
+          classOf[String], classOf[String], classOf[String], classOf[String], classOf[String], classOf[String])
         try {
-//          val (doctor, rating, doctorCreated) = doctorNameAndLocation.getRating (
-//            user, name, surname, countryId, region, city, problem)
-//          val json = ratingToJson (rating, Some (doctor), user, checkAuth = true)
-//          json.put ("doctorCreated", doctorCreated)
-//          respond (json.toString)
-//          // Update the `_ratings` field in the doctor in order to show him in `getDoctorsByRating`.
-//          doctorUtil.updateFromRatings (doctor)
+          assert (method ne null)
+          val rating = REQUEST.withValue (request) {server.nameAndLocation(
+            countryId, region, city, name, surname, problem
+          )}
+          val encRating = RPC.encodeResponseForSuccess (method, rating, GWT_SERIALIZATION_POLICY)
+          respond (encRating)
         } catch {
-          case UserException (message, kind) =>
-            val json = new JSONObject
-            json.put ("errorMessage", "Error " + kind + ": " + message)
-            respond (json.toString)
+          case uex: UserException =>
+            uex.printStackTrace()
+            respond (RPC.encodeResponseForFailure (method, uex, GWT_SERIALIZATION_POLICY))
           case ex =>
-            val json = new JSONObject
-            json.put ("errorMessage", ex.toString)
-            respond (json.toString)
+            ex.printStackTrace()
+            val uex = new UserException (ex.toString(), 0)
+            respond (RPC.encodeResponseForFailure (method, uex, GWT_SERIALIZATION_POLICY))
         }
       case "getRating" =>
-//        val ratingId = request getParameter "ratingId"
-//        assert ((ratingId ne null) && ratingId.length != 0)
-//        respond (ratingToJson (Rating (ratingId), None, user, checkAuth = !isAdmin) .toString)
+        val ratingId = request getParameter "ratingId"
+        // XXX
       case "ratingUpdateList" =>
         val ratingId = request getParameter "ratingId"
-        val ratingKey = KeyFactory.stringToKey (ratingId)
-        val rating = OFY.get (new Key[DoctorRating] (ratingKey))
-        if (!ratingBelongsToUser (rating, user) && !isAdmin) throw new Exception ("Security check failed.")
+        val ratingKey = ratingIdToKey (ratingId)
+        val rating = OFY.get[DoctorRating] (ratingKey)
+        if (!isAdmin && !ratingBelongsToUser (rating, user)) throw new UserException ("Security check failed.", 101)
         val field = request getParameter "field"
         assert (ratingOuterField (field), field)
         val value = request getParameter "value"
         val vop = request getParameter "vop"
-//        var values = rating.getProperty (field) .asInstanceOf[ju.List[String]]
-//        if (values eq null) values = new ju.LinkedList[String]
-//        def update(): Unit = {
-//          if (Rating.isIndexed (field)) rating.setProperty (field, values)
-//          else rating.setUnindexedProperty (field, values)
-//          val afterSave = ratingPostprocess (rating, field, values)
-//          Datastore.SERVICE.put (rating)
-//          if (afterSave.isDefined) afterSave.get.apply
-//        }
-//        vop match {
-//          case "add" =>
-//            if (!values.contains (value)) {
-//              values.add (value)
-//              update()
-//            }
-//          case "remove" =>
-//            if (values contains value) {
-//              val removed = values.remove (value)
-//              assert (removed)
-//              update()
-//            }
-//          case _ => throw new Exception ("Unknown vop: " + vop)
-//        }
+        var values = rating.getField (field) .asInstanceOf[ju.ArrayList[String]]
+        if (values eq null) values = new ju.ArrayList[String]
+        def update(): Unit = {
+          rating.setField (field, values)
+          val afterSave = ratingPostprocess (rating, field, values)
+          OFY.put[DoctorRating] (rating)
+          if (afterSave.isDefined) afterSave.get.apply
+        }
+        vop match {
+          case "add" =>
+            if (!values.contains (value)) {
+              values.add (value)
+              update()
+            }
+          case "remove" =>
+            if (values contains value) {
+              val removed = values.remove (value)
+              assert (removed)
+              update()
+            }
+          case _ => throw new Exception ("Unknown vop: " + vop)
+        }
         respond ("")
       case "ratingUpdateString" =>
         val ratingId = request getParameter "ratingId"
-        val ratingKey = KeyFactory.stringToKey (ratingId)
-//        val rating = Datastore.SERVICE.get (ratingKey)
-//        if (!ratingBelongsToUser (rating, user) && !isAdmin) throw new Exception ("Security check failed.")
-//        val field = request getParameter "field"
-//        assert (ratingOuterField (field), field)
-//        val value = request getParameter "value"
-//        val have = rating.getProperty(field).asInstanceOf[String]
-//        if (value != have) {
-//          if (Rating.isIndexed (field)) rating.setProperty (field, value)
-//          else rating.setUnindexedProperty (field, value)
-//          val afterSave = ratingPostprocess (rating, field, have)
-//          Datastore.SERVICE.put (rating)
-//          if (afterSave.isDefined) afterSave.get.apply
-//        }
+        val ratingKey = ratingIdToKey (ratingId)
+        val rating = OFY.get[DoctorRating] (ratingKey)
+        if (!isAdmin && !ratingBelongsToUser (rating, user)) throw new UserException ("Security check failed.", 101)
+        val field = request getParameter "field"
+        assert (ratingOuterField (field), field)
+        val value = request getParameter "value"
+        rating.setField (field, value)
+        OFY.put[DoctorRating] (rating)
         respond ("")
       case "ratingRemove" =>
         val ratingId = request getParameter "ratingId"
-        val ratingKey = KeyFactory.stringToKey (ratingId)
-//        val rating = Datastore.SERVICE.get (ratingKey)
-//        if (!ratingBelongsToUser (rating, user) && !isAdmin) throw new Exception ("Security check failed.")
-//        val field = request getParameter "field"
-//        assert (ratingOuterField (field), field)
-//        if (rating.hasProperty (field)) {
-//          val have = rating.getProperty (field)
-//          rating.removeProperty (field)
-//          val afterSave = ratingPostprocess (rating, field, have)
-//          Datastore.SERVICE.put (rating)
-//          if (afterSave.isDefined) afterSave.get.apply
-//        }
+        val ratingKey = ratingIdToKey (ratingId)
+        val rating = OFY.get[DoctorRating] (ratingKey)
+        if (!isAdmin && !ratingBelongsToUser (rating, user)) throw new UserException ("Security check failed.", 101)
+        val field = request getParameter "field"
+        assert (ratingOuterField (field), field)
+        rating.setField (field, null)
+        OFY.put[DoctorRating] (rating)
         respond ("")
       case "getDoctorsByRating" =>
         val doctors = REQUEST.withValue (request) {server.getDoctorsByRating(
@@ -170,12 +157,9 @@ class GaeImpl extends HttpServlet {
           condition = request getParameter "condition",
           limit = Integer.parseInt (request getParameter "limit")
         )}
-        println ("getDoctorsByRating; doctors: " + doctors) // delme
         val method = classOf[ServerImpl].getMethod ("getDoctorsByRating",
           classOf[String], classOf[String], classOf[String], Integer.TYPE)
-        println ("getDoctorsByRating; method: " + method) // delme
         val encoded = RPC.encodeResponseForSuccess (method, doctors, GWT_SERIALIZATION_POLICY)
-        println ("getDoctorsByRating; encoded: " + encoded) // delme
         respond (encoded)
       case "nop" =>
       case "getDoctorTRP" =>
@@ -199,47 +183,17 @@ class GaeImpl extends HttpServlet {
   /** Do any additional actions if necessary when a rating field is updated.<br>
    * Note: Rating is saved by the caller after this method returns.<br>
    * Returns a function which should be called after the rating is saved. */
-  protected def ratingPostprocess (rating: Entity, field: String, oldValue: AnyRef): Option[()=>Unit] = field match {
-// XXX
-//    case "type" | "averageCost" | "experience" | "satAfter" =>
-//      Some (() => doctorUtil.updateFromRatings (rating.getKey.getParent))
-    case _ => None
-  }
+  protected def ratingPostprocess (rating: DoctorRating, field: String, oldValue: AnyRef): Option[()=>Unit] =
+    field match {
+      case "type" | "averageCost" | "experience" | "satAfter" =>
+        Some (() => doctorUtil.updateFromRatings (OFY.get[Doctor] (rating.doctor)))
+      case _ => None
+    }
 
   /** Checks if the field is allowed to be updated directly with RPC requests. */
   protected def ratingOuterField (field: String): Boolean = {
     field != "fmRating" && field != "cfsRating"
   }
-
-  protected def ratingBelongsToUser (rating: DoctorRating, user: User): Boolean = {
-    assert ((user ne null) && (rating ne null))
-    assert ((rating.user ne null) && rating.user.length != 0)
-    val federated = user.getFederatedIdentity
-    if ((federated ne null) && federated.length != 0)
-      federated == rating.user
-    else
-      user.getUserId == rating.user
-  }
-
-// XXX
-//  protected def ratingToJson (rating: Rating, doctor: Option[Doctor], user: User, checkAuth: Boolean): JSONObject = {
-//    val ratingId: String = rating.id
-//    lazy val ratingKey = KeyFactory.stringToKey (ratingId)
-//    val ratingEntity = if (rating.entity.isDefined) rating.entity.get else {
-//      Datastore.SERVICE.get (ratingKey)
-//    }
-//    if (checkAuth && !ratingBelongsToUser (ratingEntity, user)) throw new Exception ("Security check failed.")
-//    val json = new JSONObject
-//    for ((key, value) <- ratingEntity.getProperties) {json.put (key, value)}
-//    val doctorEntity = if (doctor.isDefined && doctor.get.entity.isDefined) doctor.get.entity.get else {
-//      Datastore.SERVICE.get (ratingKey.getParent)
-//    }
-//    val djson = new JSONObject
-//    for ((key, value) <- doctorEntity.getProperties) {djson.put (key, value)}
-//    json.put ("doctor", djson)
-//    json.put ("ratingId", ratingId)
-//    json
-//  }
 
   override def doGet (request: HttpServletRequest, response: HttpServletResponse): Unit = welcome (request, response)
   override def doPost (request: HttpServletRequest, response: HttpServletResponse): Unit = welcome (request, response)

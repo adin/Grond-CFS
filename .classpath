@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/grond-server.jar"/>
 	<classpathentry exported="true" kind="lib" path="C:/spool/eclipse/plugins/com.google.gwt.eclipse.sdkbundle_2.4.0.r36v201109211906/gwt-2.4.0/gwt-user.jar">
 		<attributes>
 			<attribute name="javadoc_location" value="file:/C:/spool/eclipse/plugins/com.google.gwt.eclipse.sdkbundle_2.4.0.r36v201109211906/gwt-2.4.0/doc/javadoc/"/>
@@ -37,7 +38,6 @@
 	<classpathentry exported="true" kind="lib" path="war/WEB-INF/lib/httpcore-4.0.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="war/WEB-INF/lib/httpmime-4.0.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="war/WEB-INF/lib/objectify-3.0.1.jar"/>
-	<classpathentry exported="true" kind="con" path="com.google.appengine.eclipse.core.GAE_CONTAINER"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/grond-server.jar"/>
+	<classpathentry exported="true" kind="con" path="com.google.appengine.eclipse.core.GAE_CONTAINER/App Engine"/>
 	<classpathentry kind="output" path="war/WEB-INF/classes"/>
 </classpath>
