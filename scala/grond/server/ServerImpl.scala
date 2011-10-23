@@ -25,12 +25,23 @@ class ServerImpl extends RemoteServiceServlet with ServerIf {
     val user = getUser (request)
     val userDoctors = if (user eq null) Nil else doctorNameAndLocation.getDoctorsByUser (
       userId = userId (user), country = countryObj, region = region)
+    lazy val userHash_ = userHash (userId (user))
 
     val ret = new ju.LinkedList[Doctor]
     for (doctor <- doctors.take (limit) .toSet ++ userDoctors) {
+      lazy val ratingInfos = doctor.ratings.map (new JSONObject (_))
       val ratedForCondition = if (doctors.exists (_.id == doctor.id)) true else {
-        doctor.ratings.map (new JSONObject (_) .getString ("condition")) contains condition
+        ratingInfos.map (_ getString "condition") contains condition
       }
+
+      // Tell GWT if the doctor has been rated by the current user.
+      if (userDoctors contains doctor) {
+        // Send the "finished" magic word to GWT if the current user's rating was finished.
+        doctor._fromCurrentUser = if (
+          ratingInfos.exists {case ji => if ((ji getString "userHash") == userHash_) ji getBoolean "finished" else false}
+        ) "finished" else "_"
+      }
+
       if (ratedForCondition) ret add doctor
     }
     if (doctors.size > limit) ret add null // Null Doctor at the end of the List means there are more doctors.

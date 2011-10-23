@@ -647,14 +647,12 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
 
           if (doctor._experience != null) topDoctors.setHTML(1 + di, 7, doctor._experience);
 
-          //XXX
           String rateLabel = "Rate!";
-//          final JSONValue fromCurrentUser = doctor.get("_fromCurrentUser");
-//          if (fromCurrentUser != null) {
-//            if (fromCurrentUser.isString().stringValue() == "finished") rateLabel = "Update";
-//            else rateLabel = "Finish";
-//          }
-          // Change the rate button label if there exists a rating for that doctor.
+          // Change the label if the user have rated this doctor.
+          if (doctor._fromCurrentUser != null) {
+            if (doctor._fromCurrentUser.contains("finished")) rateLabel = "Update";
+            else rateLabel = "Finish";
+          }
 
           final Button rate = new Button(rateLabel);
           final int currentRow = 1 + di;
