@@ -33,4 +33,14 @@ import com.googlecode.objectify.annotation.Unindexed;
   @Unindexed public List<String> ratings;
 
   @Unindexed @Serialized public LinkedHashMap<String, Integer> type;
+
+  @Override public int hashCode() {
+    return id.intValue();
+  }
+
+  @Override public boolean equals(Object obj) {
+    if (obj instanceof Doctor) {
+      return id.equals(((Doctor) obj).id);
+    } else return false;
+  }
 }

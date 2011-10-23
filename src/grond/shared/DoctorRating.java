@@ -76,6 +76,16 @@ import com.googlecode.objectify.annotation.Unindexed;
             + levelPrefix.substring(1);
   }
 
+  @Override public int hashCode() {
+    return ((int) doctor.getId()) + id.intValue();
+  }
+
+  @Override public boolean equals(Object obj) {
+    if (!(obj instanceof DoctorRating)) return false;
+    final DoctorRating dr = (DoctorRating) obj;
+    return id.longValue() == dr.id.longValue() && doctor.getId() == dr.doctor.getId();
+  }
+
   public boolean isFinished() {
     return satAfter > 0;
   }
