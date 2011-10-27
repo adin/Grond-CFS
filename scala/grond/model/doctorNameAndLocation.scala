@@ -1,7 +1,6 @@
 package grond.model
 import java.{util => ju}
 import javax.servlet.http.{HttpServletRequest, HttpSession}
-import javax.jdo.PersistenceManager
 import scala.collection.JavaConversions._
 import com.google.appengine.api.users.{UserServiceFactory, User}
 import com.googlecode.objectify.{Query, Key}
