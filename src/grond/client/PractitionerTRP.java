@@ -3,12 +3,12 @@ package grond.client;
 import grond.shared.Doctor;
 import grond.shared.DoctorRating;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import com.google.gwt.json.client.JSONArray;
-import com.google.gwt.json.client.JSONObject;
-import com.google.gwt.json.client.JSONValue;
 import com.google.gwt.user.client.ui.FlexTable;
 import com.google.gwt.user.client.ui.FlowPanel;
 import com.google.gwt.user.client.ui.HTML;
@@ -25,7 +25,7 @@ public class PractitionerTRP {
   Panel panel;
   final long doctorId;
   Doctor doctor;
-  JSONObject trpInfo;
+  HashMap<String, Object> trpInfo;
 
   /**
    * @param doctor Optional. The Doctor entity, if it is already available.
@@ -38,12 +38,10 @@ public class PractitionerTRP {
     this.doctorId = doctorId;
     this.doctor = doctor;
     final PractitionerTRP self = this;
-    grond.getGae().getDoctorTRP(doctorId, doctor == null, grond.new Callback<JSONObject>() {
-      @Override public void onSuccess(JSONObject result) {
-        trpInfo = result;
-
-        final JSONValue freshDoctorEntity = result.get("doctor");
-//XXX//        if (freshDoctorEntity != null) self.doctor = freshDoctorEntity.isObject();
+    grond.getGae().getDoctorTRP(doctorId, doctor == null, grond.new Callback<Doctor>() {
+      @Override public void onSuccess(Doctor result) {
+        self.doctor = result;
+        trpInfo = result._trpInfo;
 
         final Panel oldPanel = self.panel;
         self.panel = new FlowPanel();
@@ -64,8 +62,8 @@ public class PractitionerTRP {
       if (doctor.firstName != null && doctor.lastName != null) panel.add(new Label(doctor.firstName + " "
           + doctor.lastName));
 
-      if (doctor.city != null && doctor.region != null) panel.add(new Label("Location - " + doctor.city
-          + "/" + doctor.region));
+      if (doctor.city != null && doctor.region != null) panel.add(new Label("Location - " + doctor.city + "/"
+          + doctor.region));
 
       final StringBuilder sb = new StringBuilder();
       if (doctor.type != null) {
@@ -88,14 +86,14 @@ public class PractitionerTRP {
     if (trpInfo == null) return;
 
     try {
-      final double insurancePercent = trpInfo.get("insurancePercent").isNumber().doubleValue();
+      final double insurancePercent = ((Number) trpInfo.get("insurancePercent")).doubleValue();
       panel.add(new Label("Accepts Insurance - " + Math.round(insurancePercent) + " percent say \"yes\""));
     } catch (Exception ex) {
       Logger.getLogger("PractitionerTRP").log(Level.SEVERE, ex.getMessage(), ex);
     }
 
     try {
-      final double ripoffPercent = trpInfo.get("ripoffPercent").isNumber().doubleValue();
+      final double ripoffPercent = ((Number) trpInfo.get("ripoffPercent")).doubleValue();
       panel.add(new Label("Medication Purchasing - requests patient use Drs. own supplements. - "
           + Math.round(ripoffPercent) + " percent say \"yes\""));
     } catch (Exception ex) {
@@ -103,14 +101,14 @@ public class PractitionerTRP {
     }
 
     try {
-      final JSONValue treatmentBreadthPercentSpread = trpInfo.get("treatmentBreadthPercentSpread");
-      if (treatmentBreadthPercentSpread != null) {
-        final JSONArray spread = treatmentBreadthPercentSpread.isArray();
+      @SuppressWarnings("unchecked")
+      final List<Object> spread = (List<Object>) trpInfo.get("treatmentBreadthPercentSpread");
+      if (spread != null) {
         if (spread.size() > 0) panel.add(new HTML(
             "This practitioner provides <b>significant</b> information on:"));
         for (int num = 0; num < spread.size(); num += 2) {
-          final String value = spread.get(num).isString().stringValue();
-          final int percent = (int) spread.get(num + 1).isNumber().doubleValue();
+          final String value = (String) spread.get(num);
+          final int percent = ((Number) spread.get(num + 1)).intValue();
           String desc = value;
           if (desc.equals("drugs")) desc = "Pharmaceutical Drugs";
           if (desc.equals("alternativeTreatments")) desc = "Alternative Treatments (vitamins, neutraceuticals, etc.)";
@@ -124,9 +122,9 @@ public class PractitionerTRP {
     }
 
     try {
-      final JSONValue alsa = trpInfo.get("actLevStart_average");
+      final Number alsa = (Number) trpInfo.get("actLevStart_average");
       if (alsa != null) {
-        int av = (int) alsa.isNumber().doubleValue();
+        int av = alsa.intValue();
         panel.add(new Label(
             "Level; average activity (level) of patients when they first saw this practitioner - " + av));
       }
@@ -135,14 +133,16 @@ public class PractitionerTRP {
     }
 
     try {
-      final JSONValue apc = trpInfo.get("averagePatientCondition");
-      final JSONValue allPatients = trpInfo.get("averageAllPatientsCondition");
-      if (apc != null && apc.isObject() != null) {
-        final JSONObject apco = apc.isObject();
+      @SuppressWarnings("unchecked")
+      final Map<String, Number> apc = (Map<String, Number>) trpInfo.get("averagePatientCondition");
+      @SuppressWarnings("unchecked")
+      final Map<String, Number> allPatients = (Map<String, Number>) trpInfo
+          .get("averageAllPatientsCondition");
+      if (apc != null && !apc.isEmpty()) {
         boolean haveValues = false;
         for (final String field : DoctorRating.levelPrefixes()) {
-          final JSONValue value = apco.get(field + "Before");
-          if (value != null && value.isNumber() != null) {
+          final Number value = (Number) apc.get(field + "Before");
+          if (value != null) {
             haveValues = true;
             break;
           }
@@ -157,17 +157,17 @@ public class PractitionerTRP {
               table.setHTML(row, 0, "&nbsp;&nbsp;&nbsp;");
               table.setHTML(row, 1, DoctorRating.levelLabel(field));
               table.setHTML(row, 2, "&nbsp;&nbsp;&nbsp;");
-              final JSONValue value = apco.get(field + "Before");
-              if (value != null && value.isNumber() != null) {
-                table.setHTML(row, 3, Integer.toString((int) value.isNumber().doubleValue()));
+              final Number value = (Number) apc.get(field + "Before");
+              if (value != null) {
+                table.setHTML(row, 3, Integer.toString(value.intValue()));
               } else {
                 table.setHTML(row, 3, "-");
               }
-              if (allPatients != null && allPatients.isObject() != null) {
-                final JSONValue allValue = allPatients.isObject().get(field + "Before");
-                if (allValue != null && allValue.isNumber() != null) {
+              if (allPatients != null && !allPatients.isEmpty()) {
+                final Number allValue = (Number) allPatients.get(field + "Before");
+                if (allValue != null) {
                   table.setHTML(row, 4, "&nbsp;&nbsp;&nbsp;");
-                  table.setHTML(row, 5, Integer.toString((int) allValue.isNumber().doubleValue()));
+                  table.setHTML(row, 5, Integer.toString(allValue.intValue()));
                 }
               }
               ++row;
@@ -181,21 +181,21 @@ public class PractitionerTRP {
     }
 
     try {
-      final JSONValue apg = trpInfo.get("averagePatientGain");
-      if (apg != null && apg.isObject() != null) {
+      @SuppressWarnings("unchecked")
+      final Map<String, Number> apg = (Map<String, Number>) trpInfo.get("averagePatientGain");
+      if (apg != null && !apg.isEmpty()) {
         panel.add(new Label("Average GAIN"));
         final FlexTable table = new FlexTable();
-        final JSONObject apgo = apg.isObject();
         int row = 0;
         for (final String field : DoctorRating.levelPrefixes()) {
           if (!field.equals("sat")) { // There isn't `satBefore`.
             table.setHTML(row, 0, "&nbsp;&nbsp;&nbsp;");
             table.setHTML(row, 1, DoctorRating.levelLabel(field));
             table.setHTML(row, 2, "&nbsp;&nbsp;&nbsp;");
-            final JSONValue value = apgo.get(field);
-            if (value != null && value.isNumber() != null) {
+            final Number value = (Number) apg.get(field);
+            if (value != null) {
               final StringBuilder sb = new StringBuilder();
-              final int gain = (int) value.isNumber().doubleValue();
+              final int gain = value.intValue();
               if (gain <= 0) {
                 sb.append("<span class=\"NegativeGain\">");
                 for (int i = 0; i < -gain; ++i)

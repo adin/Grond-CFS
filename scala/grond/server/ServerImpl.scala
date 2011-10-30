@@ -71,4 +71,12 @@ class ServerImpl extends RemoteServiceServlet with ServerIf {
     if (!isAdmin && !ratingBelongsToUser (rating, user)) throw new UserException ("Security check failed.", 101)
     rating
   }
+
+  @throws(classOf[UserException])
+  override def getDoctorTRP (doctorId: Long, needDoctorInfo: Boolean): Doctor = {
+    val doctorKey = new Key[Doctor] (classOf[Doctor], doctorId)
+    val doctor = OFY.get[Doctor] (doctorKey)
+    if (needDoctorInfo) doctor._trpInfo = grond.model.doctorUtil.getTRPInfo (doctor)
+    doctor
+  }
 }

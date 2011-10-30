@@ -15,4 +15,6 @@ import com.google.gwt.user.client.rpc.RemoteServiceRelativePath;
       String surname, String problem) throws UserException;
 
   public DoctorRating getRating(String ratingId) throws UserException;
+
+  public Doctor getDoctorTRP(long doctorId, boolean needDoctorInfo) throws UserException;
 }

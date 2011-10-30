@@ -354,14 +354,20 @@ public class Gae {
   }
 
   public void getDoctorTRP(final long doctorId, final boolean needDoctorInfo,
-      final AsyncCallback<JSONObject> callback) {
-    gaeString(new ForwardingCallback<String, JSONObject>(callback) {
-      public void onSuccess(final String info) {
-        final JSONObject json = JSONParser.parseStrict(info).isObject();
-        recipient.onSuccess(json);
-      }
-    }, "op", "getDoctorTRP", "doctorId", Long.toString(doctorId), "needDoctorInfo", needDoctorInfo ? "true"
-        : "false");
+      final AsyncCallback<Doctor> callback) {
+    if (USE_GWT_RPC || true) {
+      final ServerIfAsync server = GWT.create(ServerIf.class);
+      server.getDoctorTRP(doctorId, needDoctorInfo, callback);
+      return;
+    }
+// XXX
+//    gaeString(new ForwardingCallback<String, JSONObject>(callback) {
+//      public void onSuccess(final String info) {
+//        final JSONObject json = JSONParser.parseStrict(info).isObject();
+//        recipient.onSuccess(json);
+//      }
+//    }, "op", "getDoctorTRP", "doctorId", Long.toString(doctorId), "needDoctorInfo", needDoctorInfo ? "true"
+//        : "false");
   }
 
   public void getDoctorSuggestions(final String region, final String city,

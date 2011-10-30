@@ -1,5 +1,6 @@
 package grond.server
 import java.{util => ju}
+import java.lang.{Integer, Long}
 import javax.servlet.http._
 import scala.collection.JavaConversions._
 import com.google.appengine.api.datastore.{Entity, KeyFactory}
@@ -164,15 +165,11 @@ class GaeImpl extends HttpServlet {
       case "nop" =>
       case "getDoctorTRP" =>
         val doctorId = (request getParameter "doctorId").toLong
-        val doctorKey = KeyFactory.createKey ("Doctor", doctorId)
-//        lazy val doctor = Datastore.SERVICE.get (doctorKey)
-//
-//        val json = doctorUtil.getTRPInfo (doctorKey)
-//
-//        val needDoctorInfo = (request getParameter "needDoctorInfo") == "true"
-//        if (needDoctorInfo) json.put ("doctor", doctorToJson (doctor, user) ._1)
-//
-//        respond (json.toString)
+        val needDoctorInfo = (request getParameter "needDoctorInfo") == "true"
+        val doctor = server.getDoctorTRP (doctorId, needDoctorInfo)
+        val method = classOf[ServerImpl].getMethod ("getDoctorTRP", java.lang.Long.TYPE, java.lang.Boolean.TYPE)
+        val encoded = RPC.encodeResponseForSuccess (method, doctor, GWT_SERIALIZATION_POLICY)
+        respond (encoded)
       case "getDoctorSuggestions" =>
         respond (suggestions.getDoctorSuggestions (request getParameter "region", request getParameter "city") .toString)
       case op =>

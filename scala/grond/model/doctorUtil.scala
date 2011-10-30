@@ -96,13 +96,13 @@ object doctorUtil {
     OFY.put[Doctor] (doctor)
   }
 
-  def getTRPInfo (doctor: Doctor): JSONObject = {
-    val json = new JSONObject
+  def getTRPInfo (doctor: Doctor): ju.HashMap[String, Object] = {
+    val trpInfo = new ju.HashMap[String, Object]
     val (ratings, unfinishedRatings) = fetchRatings (doctor)
 
     def percent (field: DoctorRating => String, value: String): Unit = try {
       val count = ratings.count (field (_) == value)
-      json.put (field + "Percent", 100.0 * count / ratings.size)
+      trpInfo.put (field + "Percent", new java.lang.Double (100.0 * count / ratings.size))
     } catch {case ex => ex.printStackTrace}
 
     percent (_.insurance, "Yes")
@@ -111,8 +111,8 @@ object doctorUtil {
     def percentSpread (field: DoctorRating => Iterable[String]): Unit = try {
       val spread = ratings.flatMap (field (_)).groupBy (s => s)
       val sorted = spread.map {case (value, values) => (value, values.size)} .toList.sortBy (_._2)
-      val percent = sorted.flatMap {case (value, size) => List (value, 100.0 * size / ratings.size)}
-      json.put (field + "PercentSpread", seqAsJavaList[Any] (percent))
+      val percent = sorted.flatMap {case (value, size) => List (value, new java.lang.Double (100.0 * size / ratings.size))}
+      trpInfo.put (field + "PercentSpread", seqAsJavaList[Any] (percent))
     } catch {case ex => ex.printStackTrace}
 
     percentSpread (_.treatmentBreadth)
@@ -121,16 +121,16 @@ object doctorUtil {
       val nums = ratings.map (_.actLevStart) .filter (_ > 0)
       if (nums.size > 0) {
         val sum = nums.map (_.toInt) .sum
-        json.put ("actLevStart_average", sum / nums.size)
+        trpInfo.put ("actLevStart_average", new java.lang.Integer (sum / nums.size))
       }
     } catch {case ex => ex.printStackTrace}
     
     try {
       val average = for (field <- DoctorRating.levelPrefixes; suffix <- "Before" :: "After" :: Nil; val name = field + suffix) yield {
         val values = ratings.map (_.levels.get (name)) .filter (_ != null) .map (_.intValue)
-        (name, if (values.isEmpty) null else values.sum / values.size)
+        (name, if (values.isEmpty) null else new Integer (values.sum / values.size))
       }
-      json.put ("averagePatientCondition", mapAsJavaMap (Map (average :_*)))
+      trpInfo.put ("averagePatientCondition", mapAsJavaMap (Map (average :_*)))
     } catch {case ex => ex.printStackTrace}
 
     try {
@@ -140,9 +140,9 @@ object doctorUtil {
           val after = rating.levels.get (field + "After") match {case null => None; case num => Some (num.intValue)}
           if (before.isDefined && after.isDefined) Some (after.get - before.get) else None
         }
-        (field, if (gains.isEmpty) 0 else gains.sum / gains.size)
+        (field, new Integer (if (gains.isEmpty) 0 else gains.sum / gains.size))
       }
-      json.put ("averagePatientGain", mapAsJavaMap (Map (averageGain :_*)))
+      trpInfo.put ("averagePatientGain", mapAsJavaMap (Map (averageGain :_*)))
     } catch {case ex => ex.printStackTrace}
 
     // XXX: Implement all-ratings calculations as a background / cron task.
@@ -155,9 +155,9 @@ object doctorUtil {
         val values = allFinishedRatings.map (_.levels get name) .filter (_ != null) .map (_.intValue)
         (name, if (values.isEmpty) null else values.sum / values.size)
       }
-      json.put ("averageAllPatientsCondition", mapAsJavaMap (Map (average :_*)))
+      trpInfo.put ("averageAllPatientsCondition", mapAsJavaMap (Map (average :_*)))
     } catch {case ex => ex.printStackTrace}
 
-    json
+    trpInfo
   }
 }

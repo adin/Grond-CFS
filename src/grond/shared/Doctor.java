@@ -3,6 +3,7 @@ package grond.shared;
 import grond.model.doctorUtil;
 
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 
@@ -44,6 +45,9 @@ import com.googlecode.objectify.annotation.Unindexed;
    * the field is then populated in {@link ServerIf#getDoctorsByRating}).<br>
    * This field is only available in GWT, do not use it in GAE. */
   @Transient public String _fromCurrentUser;
+  /** Information from `doctorUtil.getTRPInfo`.<br>
+   * This field is only available in GWT, do not use it in GAE. */
+  @Transient public HashMap<String, Object> _trpInfo;
 
   @Override public int hashCode() {
     return id.intValue();

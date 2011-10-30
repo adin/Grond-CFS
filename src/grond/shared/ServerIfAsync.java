@@ -12,4 +12,6 @@ public interface ServerIfAsync {
       String problem, AsyncCallback<DoctorRating> callback);
 
   void getRating(String ratingId, AsyncCallback<DoctorRating> callback);
+
+  void getDoctorTRP(long doctorId, boolean needDoctorInfo, AsyncCallback<Doctor> callback);
 }
