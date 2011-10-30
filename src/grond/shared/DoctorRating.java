@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.logging.Logger;
 
 import javax.persistence.Id;
 import javax.persistence.Transient;
@@ -39,20 +40,34 @@ import com.googlecode.objectify.annotation.Unindexed;
 
   // Indexed form fields.
   /** Indexed copy of `levels("satAfter")` */
-  public int satAfter; // XXX: Update `satAfter` when it is updated in `levels`.
+  public int satAfter;
 
   // Unindexed form fields.
   @Unindexed public ArrayList<String> type;
   @Unindexed public String typeSpecialistOther;
   @Unindexed public String typeAlternativeOther;
   @Unindexed public String experience;
+  @Unindexed public String initialCost;
   @Unindexed public String averageCost;
   @Unindexed public String insurance;
-  @Unindexed public String ripoff;
+  @Unindexed public String visitLength;
   @Unindexed public ArrayList<String> treatmentBreadth;
+  @Unindexed public String ripoff;
+  @Unindexed public String organization;
+  @Unindexed public String availability;
+  @Unindexed public String age;
+  /** "f" or "m" */
+  @Unindexed public String gender;
+  @Unindexed public String reason;
+  @Unindexed public String distance;
+  @Unindexed public String seeingTime;
+  @Unindexed public String beingIll;
   @Unindexed public int actLevStart;
   @Unindexed public int actLevEnd;
   @Unindexed @Serialized public HashMap<String, Integer> levels;
+  @Unindexed public String patientComments;
+  @Unindexed public String patientName;
+  @Unindexed public String patientEmail;
 
   // Fields passed to GWT (see ServerIf#nameAndLocation, ServerIf#getRating).
   /** This field is only available in GWT, do not use it in GAE. */
@@ -101,15 +116,73 @@ import com.googlecode.objectify.annotation.Unindexed;
     else if (field.equals("type")) type = (ArrayList<String>) value;
     else if (field.equals("typeSpecialistOther")) typeSpecialistOther = (String) value;
     else if (field.equals("typeAlternativeOther")) typeAlternativeOther = (String) value;
-    else throw new RuntimeException("DoctorRating.setField: unknown field: " + field);
+    else if (field.equals("experience")) experience = (String) value;
+    else if (field.equals("initialCost")) initialCost = (String) value;
+    else if (field.equals("averageCost")) averageCost = (String) value;
+    else if (field.equals("insurance")) insurance = (String) value;
+    else if (field.equals("visitLength")) visitLength = (String) value;
+    else if (field.equals("treatmentBreadth")) treatmentBreadth = (ArrayList<String>) value;
+    else if (field.equals("ripoff")) ripoff = (String) value;
+    else if (field.equals("organization")) organization = (String) value;
+    else if (field.equals("availability")) availability = (String) value;
+    else if (field.equals("age")) age = (String) value;
+    else if (field.equals("gender")) gender = (String) value;
+    else if (field.equals("reason")) reason = (String) value;
+    else if (field.equals("distance")) distance = (String) value;
+    else if (field.equals("seeingTime")) seeingTime = (String) value;
+    else if (field.equals("beingIll")) beingIll = (String) value;
+    else if (field.equals("actLevStart")) actLevStart = Integer.parseInt(value.toString());
+    else if (field.equals("actLevEnd")) actLevEnd = Integer.parseInt(value.toString());
+    else if (field.equals("patientComments")) patientComments = (String) value;
+    else if (field.equals("patientName")) patientName = (String) value;
+    else if (field.equals("patientEmail")) patientEmail = (String) value;
+    else {
+      int levelValue = -1;
+      Logger.getLogger("setField").info("field: " + field);
+      for (final String levelPrefix : levelPrefixes())
+        if (field.equals(levelPrefix + "Before") || field.equals(levelPrefix + "After")) {
+          if (levels == null) levels = new HashMap<String, Integer>();
+          levelValue = Integer.parseInt(value.toString());
+          levels.put(field, levelValue);
+          if (field.equals("satAfter")) satAfter = levelValue;
+          break;
+        }
+      Logger.getLogger("setField").info(
+          "field: " + field + "; levelValue: " + levelValue + "; levels: " + levels);
+      if (levelValue == -1) throw new RuntimeException("DoctorRating.setField: unknown field: " + field);
+    }
   }
 
   /** Reflective retrieval of fields, currently used by RatingForm. */
   public Object getField(final String field) {
-    if (field.equals("condition")) return condition;
+    if (field == null || field.length() == 0) return null;
+    else if (field.equals("condition")) return condition;
     else if (field.equals("type")) return type;
     else if (field.equals("typeSpecialistOther")) return typeSpecialistOther;
     else if (field.equals("typeAlternativeOther")) return typeAlternativeOther;
-    else throw new RuntimeException("DoctorRating.getField: unknown field: " + field);
+    else if (field.equals("experience")) return experience;
+    else if (field.equals("initialCost")) return initialCost;
+    else if (field.equals("averageCost")) return averageCost;
+    else if (field.equals("insurance")) return insurance;
+    else if (field.equals("visitLength")) return visitLength;
+    else if (field.equals("treatmentBreadth")) return treatmentBreadth;
+    else if (field.equals("ripoff")) return ripoff;
+    else if (field.equals("organization")) return organization;
+    else if (field.equals("availability")) return availability;
+    else if (field.equals("age")) return age;
+    else if (field.equals("gender")) return gender;
+    else if (field.equals("reason")) return reason;
+    else if (field.equals("distance")) return distance;
+    else if (field.equals("seeingTime")) return seeingTime;
+    else if (field.equals("beingIll")) return beingIll;
+    else if (field.equals("actLevStart")) return Integer.toString(actLevStart);
+    else if (field.equals("actLevEnd")) return Integer.toString(actLevEnd);
+    else if (field.equals("patientComments")) return patientComments;
+    else if (field.equals("patientName")) return patientName;
+    else if (field.equals("patientEmail")) return patientEmail;
+    else for (final String levelPrefix : levelPrefixes())
+      if (field.equals(levelPrefix + "Before") || field.equals(levelPrefix + "After")) return levels != null
+          && levels.containsKey(field) ? levels.get(field).toString() : "";
+    throw new RuntimeException("DoctorRating.getField: unknown field: " + field);
   }
 }

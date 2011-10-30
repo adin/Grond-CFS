@@ -478,7 +478,7 @@ public class RatingForm {
 
     final Command verifier = new Command() {
       @Override public void execute() {
-        if (rating.getField("satAfter") != null) {
+        if (rating.satAfter <= 0) {
           final HTML html = new HTML(
               "<span style='color: red; font-size: larger'>Please provide the overall satisfaction!</span>");
           panel.add(html);
