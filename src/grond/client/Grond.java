@@ -407,14 +407,12 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
 
               public void onSuccess(final DoctorRating rating) {
                 root.clear();
-                // XXX Pass `doctorCreated` via DoctorRating?
-                //final boolean doctorCreated = result.get("doctorCreated").isBoolean().booleanValue();
-                //if (doctorCreated) {
-                //  root.add(new Label("Thanks for telling us about this practitioner!"));
-                //} else {
-                //  root.add(new Label("This practicioner is withing our database."
-                //      + " Please go on with your rating!"));
-                //}
+                if (rating._doctorCreated) {
+                  root.add(new Label("Thanks for telling us about this practitioner!"));
+                } else {
+                  root.add(new Label("This practicioner is withing our database."
+                      + " Please go on with your rating!"));
+                }
                 final String ratingId = rating.getFullId();
                 History.newItem("rateFormIn_" + countryId + '_' + condition + '_' + ratingId, false);
                 final RatingForm form = new RatingForm(grondSelf, countryId, condition, ratingId, root);
@@ -640,10 +638,9 @@ public class Grond implements EntryPoint, ValueChangeHandler<String> {
             topDoctors.setHTML(1 + di, 5, html.toString());
           }
 
-          // XXX
-//          final JSONValue satisfaction = doctor.get("_" + condition + "Satisfaction");
-//          if (satisfaction != null) topDoctors.setHTML(1 + di, 6,
-//              Integer.toString((int) satisfaction.isNumber().doubleValue()));
+          final int satisfaction = condition.equals("fm") ? doctor._fmSatisfaction
+              : condition.equals("cfs") ? doctor._cfsSatisfaction : -1;
+          if (satisfaction != -1) topDoctors.setHTML(1 + di, 6, Integer.toString(satisfaction));
 
           if (doctor._experience != null) topDoctors.setHTML(1 + di, 7, doctor._experience);
 
