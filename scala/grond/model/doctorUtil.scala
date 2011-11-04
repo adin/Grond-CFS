@@ -46,7 +46,7 @@ object doctorUtil {
       for (rating <- ratings) {
         if (rating.`type` != null) for (ti <- rating.`type`) {typesCount.update (ti, typesCount.getOrElse (ti, 0) + 1)}
       }
-      val lhm = new ju.LinkedHashMap[String, java.lang.Integer]
+      val lhm = new ju.LinkedHashMap[String, JInteger]
       for (sortedKey <- typesCount.keys.toList.sortWith {case (a, b) => typesCount(b) < typesCount(a) || a < b}) {
         lhm.put (sortedKey, typesCount (sortedKey))
       }
@@ -72,7 +72,7 @@ object doctorUtil {
       val levels = ranges.flatMap {case range =>
         // The range has a "<N", ">N" or "N1-N2" form.
         val (begin, end) = if (range startsWith "<") (0, range.substring(1).toInt)
-          else if (range startsWith ">") (range.substring(1).toInt, Integer.MAX_VALUE)
+          else if (range startsWith ">") (range.substring(1).toInt, JInteger.MAX_VALUE)
           else {val hyphen = range.indexOf ('-'); (range.substring (0, hyphen) .toInt, range.substring (hyphen + 1) .toInt)}
         samples.find {case (sample, level) => begin <= sample && sample <= end} .map (_._2)
       }
@@ -112,7 +112,7 @@ object doctorUtil {
       val spread = ratings.flatMap (field (_)).groupBy (s => s)
       val sorted = spread.map {case (value, values) => (value, values.size)} .toList.sortBy (_._2)
       val percent = sorted.flatMap {case (value, size) => List (value, new java.lang.Double (100.0 * size / ratings.size))}
-      trpInfo.put (field + "PercentSpread", seqAsJavaList[Any] (percent))
+      trpInfo.put (field + "PercentSpread", new ju.LinkedList (percent))
     } catch {case ex => ex.printStackTrace}
 
     percentSpread (_.treatmentBreadth)
@@ -121,16 +121,17 @@ object doctorUtil {
       val nums = ratings.map (_.actLevStart) .filter (_ > 0)
       if (nums.size > 0) {
         val sum = nums.map (_.toInt) .sum
-        trpInfo.put ("actLevStart_average", new java.lang.Integer (sum / nums.size))
+        trpInfo.put ("actLevStart_average", new JInteger (sum / nums.size))
       }
     } catch {case ex => ex.printStackTrace}
     
     try {
       val average = for (field <- DoctorRating.levelPrefixes; suffix <- "Before" :: "After" :: Nil; val name = field + suffix) yield {
         val values = ratings.map (_.levels.get (name)) .filter (_ != null) .map (_.intValue)
-        (name, if (values.isEmpty) null else new Integer (values.sum / values.size))
+        (name, if (values.isEmpty) null else new JInteger (values.sum / values.size))
       }
-      trpInfo.put ("averagePatientCondition", mapAsJavaMap (Map (average :_*)))
+      val apc = new ju.HashMap[String, JInteger]; apc.putAll (Map (average :_*))
+      trpInfo.put ("averagePatientCondition", apc)
     } catch {case ex => ex.printStackTrace}
 
     try {
@@ -140,9 +141,10 @@ object doctorUtil {
           val after = rating.levels.get (field + "After") match {case null => None; case num => Some (num.intValue)}
           if (before.isDefined && after.isDefined) Some (after.get - before.get) else None
         }
-        (field, new Integer (if (gains.isEmpty) 0 else gains.sum / gains.size))
+        (field, new JInteger (if (gains.isEmpty) 0 else gains.sum / gains.size))
       }
-      trpInfo.put ("averagePatientGain", mapAsJavaMap (Map (averageGain :_*)))
+      val apg = new ju.HashMap[String, JInteger]; apg.putAll (Map (averageGain :_*))
+      trpInfo.put ("averagePatientGain", apg)
     } catch {case ex => ex.printStackTrace}
 
     // XXX: Implement all-ratings calculations as a background / cron task.
@@ -153,9 +155,10 @@ object doctorUtil {
       // Average condition for ALL doctors.
       val average = for (field <- DoctorRating.levelPrefixes; suffix <- "Before" :: "After" :: Nil; val name = field + suffix) yield {
         val values = allFinishedRatings.map (_.levels get name) .filter (_ != null) .map (_.intValue)
-        (name, if (values.isEmpty) null else values.sum / values.size)
+        (name, if (values.isEmpty) null else new JInteger (values.sum / values.size))
       }
-      trpInfo.put ("averageAllPatientsCondition", mapAsJavaMap (Map (average :_*)))
+      val aapc = new ju.HashMap[String, JInteger]; aapc.putAll (Map (average :_*))
+      trpInfo.put ("averageAllPatientsCondition", aapc)
     } catch {case ex => ex.printStackTrace}
 
     trpInfo

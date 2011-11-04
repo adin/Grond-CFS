@@ -17,6 +17,12 @@ class ServerImpl extends RemoteServiceServlet with ServerIf {
     Option (REQUEST.value) .getOrElse (getThreadLocalRequest)
   }
 
+  // Extend the list of serializable classes.
+  // https://groups.google.com/group/google-web-toolkit/browse_thread/thread/9eb513e449be3940/
+  override def serializableWhiteList (swl: grond.shared.SerializableWhiteList) = {
+    new grond.shared.SerializableWhiteList
+  }
+
   @throws(classOf[UserException])
   override def getDoctorsByRating (country: String, region: String, condition: String, limit: Int): ju.LinkedList[Doctor] = {
     val countryObj = Countries.getCountry (country)

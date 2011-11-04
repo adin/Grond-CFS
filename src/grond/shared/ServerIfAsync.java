@@ -5,6 +5,8 @@ import java.util.LinkedList;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 
 public interface ServerIfAsync {
+  void serializableWhiteList(SerializableWhiteList swl, AsyncCallback<SerializableWhiteList> callback);
+
   public void getDoctorsByRating(String country, String region, String condition, int limit,
       AsyncCallback<LinkedList<Doctor>> callback);
 
