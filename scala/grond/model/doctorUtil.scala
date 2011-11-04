@@ -100,13 +100,13 @@ object doctorUtil {
     val trpInfo = new ju.HashMap[String, Object]
     val (ratings, unfinishedRatings) = fetchRatings (doctor)
 
-    def percent (field: DoctorRating => String, value: String): Unit = try {
-      val count = ratings.count (field (_) == value)
+    def percent (field: String, value: DoctorRating => String, of: String): Unit = try {
+      val count = ratings.count (value (_) == of)
       trpInfo.put (field + "Percent", new java.lang.Double (100.0 * count / ratings.size))
     } catch {case ex => ex.printStackTrace}
 
-    percent (_.insurance, "Yes")
-    percent (_.ripoff, "Yes")
+    percent ("insurance", _.insurance, "Yes")
+    percent ("ripoff", _.ripoff, "Yes")
 
     def percentSpread (field: DoctorRating => Iterable[String]): Unit = try {
       val spread = ratings.flatMap (field (_)).groupBy (s => s)
