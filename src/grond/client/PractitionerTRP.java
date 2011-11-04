@@ -38,7 +38,7 @@ public class PractitionerTRP {
     this.doctorId = doctorId;
     this.doctor = doctor;
     final PractitionerTRP self = this;
-    grond.getGae().getDoctorTRP(doctorId, doctor == null, grond.new Callback<Doctor>() {
+    grond.getGae().getDoctorTRP(doctorId, true, grond.new Callback<Doctor>() {
       @Override public void onSuccess(Doctor result) {
         self.doctor = result;
         trpInfo = result._trpInfo;
