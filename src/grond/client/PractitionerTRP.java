@@ -4,6 +4,7 @@ import grond.shared.Doctor;
 import grond.shared.DoctorRating;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
@@ -66,14 +67,13 @@ public class PractitionerTRP {
           + doctor.region));
 
       final StringBuilder sb = new StringBuilder();
-      if (doctor.type != null) {
-// XXX
-//        final JSONArray typea = type.isArray();
-//        if (typea != null) for (int n = 0; n < typea.size(); n += 2) {
-//          sb.append(typea.get(n).isString().stringValue());
-//          if (n + 2 < typea.size()) sb.append("; ");
-//        }
-//        panel.add(new Label("Type - " + sb.toString()));
+      if (doctor.type != null && !doctor.type.isEmpty()) {
+        final Iterator<String> keys = doctor.type.keySet().iterator();
+        for (int n = 0; n < doctor.type.size(); ++n) {
+          sb.append(keys.next());
+          if (n < doctor.type.size()) sb.append("; ");
+        }
+        panel.add(new Label("Type - " + sb.toString()));
       }
 
       if (doctor._experience != null) panel.add(new Label("Average Rated Experience Level - "
