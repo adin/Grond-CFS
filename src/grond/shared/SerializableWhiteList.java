@@ -8,4 +8,5 @@ import com.google.gwt.user.client.rpc.IsSerializable;
  */
 public class SerializableWhiteList implements IsSerializable {
   @SuppressWarnings("unused") private Double aDouble;
+  @SuppressWarnings("unused") private int[] intArray;
 }

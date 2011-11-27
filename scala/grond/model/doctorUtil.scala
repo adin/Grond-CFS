@@ -70,10 +70,7 @@ object doctorUtil {
       val samples = Map ((300, 1), (900, 2), (1500, 3), (3600, 4), (7200, 5))
       val ranges = ratings.map (_.averageCost) .filter (_ ne null)
       val levels = ranges.flatMap {case range =>
-        // The range has a "<N", ">N" or "N1-N2" form.
-        val (begin, end) = if (range startsWith "<") (0, range.substring(1).toInt)
-          else if (range startsWith ">") (range.substring(1).toInt, JInteger.MAX_VALUE)
-          else {val hyphen = range.indexOf ('-'); (range.substring (0, hyphen) .toInt, range.substring (hyphen + 1) .toInt)}
+        val (begin, end) = parseIntRange (range) .get
         samples.find {case (sample, level) => begin <= sample && sample <= end} .map (_._2)
       }
       doctor._averageCostLevel = if (levels.isEmpty) 0 else levels.sum / levels.size
@@ -147,6 +144,15 @@ object doctorUtil {
       trpInfo.put ("averagePatientGain", apg)
     } catch {case ex => ex.printStackTrace}
 
+    try {
+      trpInfo.put ("distances", rangesToArray (ratings.flatMap (rating => parseIntRange (
+        rating.distance match {
+//          case ">50" => "<50" // A fix for an old typo.
+          case ok => ok
+        }
+      ))))
+    } catch {case ex => ex.printStackTrace}
+
     // XXX: Implement all-ratings calculations as a background / cron task.
 
     lazy val allFinishedRatings = OFY.query (classOf[DoctorRating]) .filter ("satAfter >", 0) .toList
@@ -162,5 +168,30 @@ object doctorUtil {
     } catch {case ex => ex.printStackTrace}
 
     trpInfo
+  }
+
+  /**
+   * Range examples: "<50", "50-100", "100-500", ">1000".
+   */
+  protected def parseIntRange (range: String): Option[(Int, Int)] = {
+    if (range == null || range.length() == 0) return None
+    val hyphen = range.indexOf ('-')
+    if (hyphen != -1) {
+      val left = range.substring (0, hyphen) .replaceAll ("\\D", "") .toInt
+      val right = range.substring (hyphen + 1) .replaceAll ("\\D", "") .toInt
+      return Some (if (left <= right) (left, right) else (right, left))
+    }
+    if (range startsWith "<") return Some (0, range.substring (1) .replaceAll ("\\D", "") .toInt)
+    if (range startsWith ">") return Some (range.substring (1) .replaceAll ("\\D", "") .toInt, Int.MaxValue)
+    return None
+  }
+
+  protected def rangesToArray (ranges: Iterable[(Int, Int)]): Array[Int] = {
+    val array = new Array[Int] (ranges.size * 2)
+    var pt = 0; for ((begin, end) <- ranges) {
+      array(pt) = begin; pt += 1
+      array(pt) = end; pt += 1
+    }
+    array
   }
 }

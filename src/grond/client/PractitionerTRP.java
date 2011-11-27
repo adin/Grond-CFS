@@ -3,6 +3,7 @@ package grond.client;
 import grond.shared.Doctor;
 import grond.shared.DoctorRating;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -18,6 +19,11 @@ import com.google.gwt.user.client.ui.HasVerticalAlignment;
 import com.google.gwt.user.client.ui.Image;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.Panel;
+import com.google.gwt.visualization.client.AbstractDataTable.ColumnType;
+import com.google.gwt.visualization.client.DataTable;
+import com.google.gwt.visualization.client.VisualizationUtils;
+import com.google.gwt.visualization.client.visualizations.corechart.PieChart;
+import com.google.gwt.visualization.client.visualizations.corechart.PieChart.PieOptions;
 
 /** Practitioner Treatment Review Page.<br>
  * Extended information about the practitioner. */
@@ -221,10 +227,84 @@ public class PractitionerTRP {
     }
 
     try {
+      final int[] distances = (int[]) trpInfo.get("distances");
+      if (distances != null) {
+        panel.add(new Label("Distance Travelled"));
+        for (int pt = 0; pt < distances.length; pt += 2) {
+          panel.add(new Label(distances[pt] + "-" + distances[pt + 1]));
+        }
+        VisualizationUtils.loadVisualizationApi(new Runnable() {
+          public void run() {
+            final PieOptions options = PieChart.createPieOptions();
+            options.setWidth(400);
+            options.setHeight(240);
+            options.set3D(true);
+            options.setTitle("Distance Travelled");
 
+            final DataTable data = DataTable.create();
+            data.addColumn(ColumnType.STRING, "Distance");
+            data.addColumn(ColumnType.NUMBER, "miles");
+            data.addRows(4);
+            data.setValue(0, 0, "<100");
+            ArrayList<ArrayList<Integer>> fitAndRest = partition(toAL(distances), 1, 99);
+            data.setValue(0, 1, percent(distances, fitAndRest.get(0)));
+            data.setValue(1, 0, "100-500");
+            fitAndRest = partition(fitAndRest.get(1), 101, 499);
+            data.setValue(1, 1, percent(distances, fitAndRest.get(0)));
+            data.setValue(2, 0, "500-1000");
+            fitAndRest = partition(fitAndRest.get(1), 501, 999);
+            data.setValue(2, 1, percent(distances, fitAndRest.get(0)));
+            data.setValue(3, 0, ">1000");
+            fitAndRest = partition(fitAndRest.get(1), 1001, 9000);
+            data.setValue(3, 1, percent(distances, fitAndRest.get(0)));
+
+            PieChart pie = new PieChart(data, options);
+            panel.add(pie);
+          }
+        }, PieChart.PACKAGE);
+      }
     } catch (Exception ex) {
       Logger.getLogger("PractitionerTRP").log(Level.SEVERE, ex.getMessage(), ex);
     }
+  }
 
+  /** How many ranges contain the value? In percents. */
+  protected int percent(final int[] ranges, final ArrayList<Integer> fit) {
+    int count = fit.size() / 2;
+    int total = ranges.length / 2;
+    return count * 100 / total;
+  }
+
+  /** Separate the fitting ranges from the rest.<br>
+   * Returns the array of fitting ranges and the array of unfitting ranges. */
+  protected ArrayList<ArrayList<Integer>> partition(ArrayList<Integer> ranges, final int from, final int till) {
+    final ArrayList<ArrayList<Integer>> ret = new ArrayList<ArrayList<Integer>>(2);
+    final ArrayList<Integer> fit = new ArrayList<Integer>();
+    final ArrayList<Integer> rest = new ArrayList<Integer>();
+    ret.add(fit);
+    ret.add(rest);
+    for (int pt = 0; pt < ranges.size(); pt += 2) {
+      if (ranges.get(pt).intValue() <= from && from < ranges.get(pt + 1).intValue()) {
+        fit.add(ranges.get(pt));
+        fit.add(ranges.get(pt + 1));
+      } else if (ranges.get(pt).intValue() <= till && till < ranges.get(pt + 1).intValue()) {
+        fit.add(ranges.get(pt));
+        fit.add(ranges.get(pt + 1));
+      } else if (from < ranges.get(pt) && ranges.get(pt) < till) {
+        fit.add(ranges.get(pt));
+        fit.add(ranges.get(pt + 1));
+      } else {
+        rest.add(ranges.get(pt));
+        rest.add(ranges.get(pt + 1));
+      }
+    }
+    return ret;
+  }
+
+  protected ArrayList<Integer> toAL(int[] ranges) {
+    final ArrayList<Integer> al = new ArrayList<Integer>(ranges.length);
+    for (int range : ranges)
+      al.add(range);
+    return al;
   }
 }

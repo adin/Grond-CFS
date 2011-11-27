@@ -306,7 +306,7 @@ public class RatingForm {
     panel.add(h3(new InlineHTML("DISTANCE: ")));
     panel.add(new InlineHTML("How far did you travel to see this practitioner?"));
     panel.add(radioInput("distance", null, "<br/>", //
-        ">50", ">50 miles", //
+        "<50", "<50 miles", //
         "50-100", "50-100 miles", //
         "100-500", "100-500 miles", //
         "500-1000", "500-1,000 miles", //

@@ -19,6 +19,10 @@
   <!-- We need Objectify for GWT to tolerate `Key` in `grond.shared.DoctorRating`. -->
   <inherits name="com.googlecode.objectify.Objectify" />
 
+  <!-- Charts. -->
+  <!-- http://code.google.com/p/gwt-google-apis/wiki/VisualizationGettingStarted -->
+  <inherits name="com.google.gwt.visualization.Visualization" />
+
   <!-- Other module inherits                                      -->
 
   <!-- Enable cross-site execution of the application. See
