@@ -145,12 +145,18 @@ object doctorUtil {
     } catch {case ex => ex.printStackTrace}
 
     try {
-      trpInfo.put ("distances", rangesToArray (ratings.flatMap (rating => parseIntRange (
-        rating.distance match {
-//          case ">50" => "<50" // A fix for an old typo.
-          case ok => ok
+      val freqs = ratings.flatMap {case rating =>
+        parseIntRange (rating.visitFrequency) match {
+          case Some ((from, Int.MaxValue)) => Some (from + 3)
+          case Some ((from, till)) => Some (from + (till - from) / 2)
+          case None => None
         }
-      ))))
+      }
+      trpInfo.put ("averageVisitFrequency", new Integer (freqs.sum / freqs.size))
+    } catch {case ex => ex.printStackTrace}
+
+    try {
+      trpInfo.put ("distances", rangesToArray (ratings.flatMap (rating => parseIntRange (rating.distance))))
     } catch {case ex => ex.printStackTrace}
 
     // XXX: Implement all-ratings calculations as a background / cron task.
@@ -186,6 +192,7 @@ object doctorUtil {
     return None
   }
 
+  /** Pack pairs of ints into a plain Java array. Used for efficient transfer of ranges over RPC. */
   protected def rangesToArray (ranges: Iterable[(Int, Int)]): Array[Int] = {
     val array = new Array[Int] (ranges.size * 2)
     var pt = 0; for ((begin, end) <- ranges) {

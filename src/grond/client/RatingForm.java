@@ -235,6 +235,15 @@ public class RatingForm {
     panel.add(radioInput("visitLength", null, "<br/>", "<15m", "Less than 15 minutes", "15m-30m",
         "15 to 30 minutes", "30m-1h", "30 minutes to an hour", ">1h", "Greater than an hour"));
 
+    panel.add(h3(new InlineHTML("About how many times do you physically see this practitioner a year?")));
+    panel.add(new InlineHTML("<br/>"));
+    panel.add(radioInput("visitFrequency", null, "<br/>", //
+        "1", "1", //
+        "2", "2", //
+        "3-7", "3-7", //
+        "7-12", "7-12", //
+        ">12", ">12 times a year"));
+
     panel.add(h3(new InlineHTML("TREATMENT BREADTH -")));
     panel.add(new InlineHTML("This practitioner provides <b>significant</b> information on:"));
     panel.add(new InlineHTML("<br/>"));

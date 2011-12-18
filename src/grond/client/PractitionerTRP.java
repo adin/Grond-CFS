@@ -227,6 +227,15 @@ public class PractitionerTRP {
     }
 
     try {
+      final Integer avf = (Integer) trpInfo.get("averageVisitFrequency");
+      if (avf != null) panel.add(new Label(
+          "Number of times a person physically sees this practitioner during the year: "
+              + (avf.intValue() > 12 ? ">12" : avf)));
+    } catch (Exception ex) {
+      Logger.getLogger("PractitionerTRP").log(Level.SEVERE, ex.getMessage(), ex);
+    }
+
+    try {
       final int[] distances = (int[]) trpInfo.get("distances");
       if (distances != null) {
         panel.add(new Label("Distance Travelled"));
