@@ -152,7 +152,7 @@ object doctorUtil {
           case None => None
         }
       }
-      trpInfo.put ("averageVisitFrequency", new Integer (freqs.sum / freqs.size))
+      if (!freqs.isEmpty) trpInfo.put ("averageVisitFrequency", new Integer (freqs.sum / freqs.size))
     } catch {case ex => ex.printStackTrace}
 
     try {
