@@ -45,6 +45,13 @@ td.GrondRadioRow {
 
 /* PractitionerTRP */
 
+.TrpDoctorName {
+  font-weight: bold;
+}
+.TrpSectionHead {
+  font-size: 1.5em;
+  color: red;
+}
 .NegativeGain {
   color: gray;
 }

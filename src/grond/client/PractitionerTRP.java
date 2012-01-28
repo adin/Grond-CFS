@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.FlexTable;
 import com.google.gwt.user.client.ui.FlowPanel;
 import com.google.gwt.user.client.ui.HTML;
@@ -61,13 +62,19 @@ public class PractitionerTRP {
   }
 
   void addToPanel() {
-    panel.add(new HTML("Practitioner Treatment Review Page"));
+    Window.setTitle("Practitioner Treatment Review Page");
+
     if (doctor == null) {
       panel.add(new Image(Grond.ajaxLoaderHorisontal1()));
     } else try {
 
-      if (doctor.firstName != null && doctor.lastName != null) panel.add(new Label(doctor.firstName + " "
-          + doctor.lastName));
+      final Label name = new Label(doctor.firstName + " " + doctor.lastName);
+      name.addStyleName("TrpDoctorName");
+      if (doctor.firstName != null && doctor.lastName != null) panel.add(name);
+
+      final Label tlt = new Label("Practitioner Type and Location");
+      tlt.addStyleName("TrpSectionHead");
+      panel.add(tlt);
 
       if (doctor.city != null && doctor.region != null) panel.add(new Label("Location - " + doctor.city + "/"
           + doctor.region));
@@ -81,6 +88,8 @@ public class PractitionerTRP {
         }
         panel.add(new Label("Type - " + sb.toString()));
       }
+
+      // TODO: Website  - add option for website…
 
       if (doctor._experience != null) panel.add(new Label("Average Rated Experience Level - "
           + doctor._experience));
