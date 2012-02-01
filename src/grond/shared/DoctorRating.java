@@ -30,6 +30,8 @@ import com.googlecode.objectify.annotation.Unindexed;
   public String firstName;
   public String lastName;
 
+  public String webSite;
+
   /** User.getFederatedIdentity or User.getUserId */
   public String user;
   public String userEmail;
@@ -138,6 +140,7 @@ import com.googlecode.objectify.annotation.Unindexed;
     else if (field.equals("patientComments")) patientComments = (String) value;
     else if (field.equals("patientName")) patientName = (String) value;
     else if (field.equals("patientEmail")) patientEmail = (String) value;
+    else if (field.equals("webSite")) webSite = (String) value;
     else {
       int levelValue = -1;
       Logger.getLogger("setField").info("field: " + field);
@@ -183,6 +186,7 @@ import com.googlecode.objectify.annotation.Unindexed;
     else if (field.equals("patientComments")) return patientComments;
     else if (field.equals("patientName")) return patientName;
     else if (field.equals("patientEmail")) return patientEmail;
+    else if (field.equals("webSite")) return webSite;
     else for (final String levelPrefix : levelPrefixes())
       if (field.equals(levelPrefix + "Before") || field.equals(levelPrefix + "After")) return levels != null
           && levels.containsKey(field) ? levels.get(field).toString() : "";

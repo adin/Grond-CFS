@@ -138,8 +138,11 @@ class GaeImpl extends HttpServlet {
         val field = request getParameter "field"
         assert (ratingOuterField (field), field)
         val value = request getParameter "value"
+        val oldValue = rating.getField (field)
         rating.setField (field, value)
+        val afterSave = ratingPostprocess (rating, field, oldValue)
         OFY.put[DoctorRating] (rating)
+        if (afterSave.isDefined) afterSave.get.apply
         respond ("")
       case "ratingRemove" =>
         val ratingId = request getParameter "ratingId"
@@ -182,7 +185,7 @@ class GaeImpl extends HttpServlet {
    * Returns a function which should be called after the rating is saved. */
   protected def ratingPostprocess (rating: DoctorRating, field: String, oldValue: AnyRef): Option[()=>Unit] =
     field match {
-      case "type" | "averageCost" | "experience" | "satAfter" =>
+      case "webSite" | "type" | "averageCost" | "experience" | "satAfter" =>
         Some (() => doctorUtil.updateFromRatings (OFY.get[Doctor] (rating.doctor)))
       case _ => None
     }

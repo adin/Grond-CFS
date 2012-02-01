@@ -132,6 +132,13 @@ public class RatingForm {
         + condition);
     if (rating.condition == null || rating.condition.length() == 0) ratingUpdateString("condition", condition);
 
+    panel.add(new InlineHTML("<br/>"));
+    panel.add(new InlineHTML("Web site:"));
+    panel.add(textInput("webSite"));
+    panel.add(new HTML("If you know the web site of the " + rating._doctor.firstName + " "
+        + rating._doctor.lastName + ", please enter it here."));
+    panel.add(new InlineHTML("<br/>"));
+
     panel.add(new HTML("TYPE OF HEALTH PROFESSIONAL"));
     panel.add(ratingBox("type", "Family Physician / Internist",
         "Family Physician / General Internal Medicine"));

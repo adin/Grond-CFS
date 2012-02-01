@@ -16,6 +16,14 @@ object doctorUtil {
   def updateFromRatings (doctor: Doctor): Unit = {
     val (ratings, unfinishedRatings) = fetchRatings (doctor)
 
+    // Web site
+    try {
+      // For now, simply get the first defined web-site.
+      val site = ratings.collectFirst[String] {
+        case rating if rating.webSite != null && rating.webSite.length() > 0 => rating.webSite}
+      doctor._webSite = site.getOrElse (null)
+    } catch {case ex => ex.printStackTrace}
+
     // Average Satisfaction
     try {
       val fmSatisfaction = new mutable.ListBuffer[Int]

@@ -12,12 +12,14 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.ui.Anchor;
 import com.google.gwt.user.client.ui.FlexTable;
 import com.google.gwt.user.client.ui.FlowPanel;
 import com.google.gwt.user.client.ui.HTML;
 import com.google.gwt.user.client.ui.HasHorizontalAlignment;
 import com.google.gwt.user.client.ui.HasVerticalAlignment;
 import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.InlineLabel;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.Panel;
 import com.google.gwt.visualization.client.AbstractDataTable.ColumnType;
@@ -89,7 +91,12 @@ public class PractitionerTRP {
         panel.add(new Label("Type - " + sb.toString()));
       }
 
-      // TODO: Website  - add option for website…
+      if (doctor._webSite != null) {
+        panel.add(new InlineLabel("Web site - "));
+        String href = doctor._webSite;
+        if (!href.contains("://")) href = "http://" + href;
+        panel.add(new Anchor(doctor._webSite, href));
+      }
 
       if (doctor._experience != null) panel.add(new Label("Average Rated Experience Level - "
           + doctor._experience));

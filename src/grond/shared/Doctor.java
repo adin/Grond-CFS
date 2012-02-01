@@ -1,7 +1,5 @@
 package grond.shared;
 
-import grond.model.doctorUtil;
-
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -26,6 +24,7 @@ import com.googlecode.objectify.annotation.Unindexed;
   public String lastName;
 
   // Fields automatically calculated from ratings, see `doctorUtil.updateFromRatings`.
+  public String _webSite;
   public int _fmSatisfaction;
   public int _cfsSatisfaction;
   @Unindexed public String _experience;
